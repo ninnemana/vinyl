@@ -1,0 +1,82 @@
+syntax = "proto3";
+package jams;
+import "timestamp.proto";
+
+message Area {
+    int32 id = 1;
+    string name = 2;
+    Type type = 3;
+    google.protobuf.Timestamp last_updated = 4;
+    google.protobuf.Timestamp begin_date = 5;
+    google.protobuf.Timestamp end_date = 6;
+    string comment = 7;
+    repeated string iso_codes = 8;
+    repeated string aliases = 9;
+}
+
+message Type {
+    string country = 1;
+    string subdivision = 2;
+    string county = 3;
+    string municipality = 4;
+    string city = 5;
+    string district = 6;
+    string island = 7;
+}
+
+message Artist {
+
+}
+
+message ArtistCredit {
+
+}
+
+message Event {
+
+}
+
+message Label {
+
+}
+
+message Place {
+
+}
+
+message Recording {
+    string name = 1;
+    int32 id = 2;
+    Duration length = 3;
+}
+
+message Medium {
+
+}
+
+message Duration {
+    int32 hours = 1;
+    int32 minutes = 2;
+    int32 seconds = 3;
+}
+
+message Release {
+
+}
+
+message ReleaseGroup {
+
+}
+
+message Series {
+
+}
+
+message URL {
+
+}
+
+message Work {
+
+}
+
