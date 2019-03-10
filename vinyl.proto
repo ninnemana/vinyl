@@ -1,0 +1,459 @@
+syntax = "proto3";
+package vinyl;
+
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+import "google/api/annotations.proto";
+// import "google/protobuf/empty.proto";
+import "protoc-gen-swagger/options/annotations.proto";
+
+option (gogoproto.protosizer_all) = true;
+option (gogoproto.sizer_all) = false;
+option go_package = "vinyl";
+
+// Artist ...
+message Artist {
+	option (gogoproto.goproto_getters) = false;
+	option (gogoproto.typedecl) = false;
+	repeated string namevariations = 1;
+	string profile = 2;
+	string releases_url = 3 [(gogoproto.customname) = "ReleasesURL"];
+	string resource_url = 4 [(gogoproto.customname) = "ResourceURL"];
+	string uri = 5 [(gogoproto.customname) = "URI"];
+	repeated string urls = 6 [(gogoproto.customname) = "URLs"];
+	string data_quality = 7;
+	int64 id = 8 [(gogoproto.casttype) = "int", (gogoproto.customname) = "ID"];
+	repeated Image images = 9 [(gogoproto.nullable) = false];
+	repeated Member members = 10 [(gogoproto.nullable) = false];
+}
+
+// ArtistSource ...
+message ArtistSource {
+	option (gogoproto.goproto_getters) = false;
+	option (gogoproto.typedecl) = false;
+	string anv = 1;
+	int64 id = 2 [(gogoproto.casttype) = "int", (gogoproto.customname) = "ID"];
+	string join = 3;
+	string name = 4;
+	string resource_url = 5 [(gogoproto.customname) = "ResourceURL"];
+	string role = 6;
+	string tracks = 7;
+}
+
+// Community ...
+message Community {
+	option (gogoproto.goproto_getters) = false;
+	option (gogoproto.typedecl) = false;
+	repeated Contributor contributors = 1 [(gogoproto.nullable) = false];
+	string data_quality = 2;
+	int64 have = 3 [(gogoproto.casttype) = "int"];
+	Rating rating = 4 [(gogoproto.nullable) = false];
+	string status = 5;
+	Submitter submitter = 6 [(gogoproto.nullable) = false];
+	int64 want = 7 [(gogoproto.casttype) = "int"];
+}
+
+// Company ...
+message Company {
+	option (gogoproto.goproto_getters) = false;
+	option (gogoproto.typedecl) = false;
+	string catno = 1;
+	string entity_type = 2;
+	string entity_type_name = 3;
+	int64 id = 4 [(gogoproto.casttype) = "int", (gogoproto.customname) = "ID"];
+	string name = 5;
+	string resource_url = 6 [(gogoproto.customname) = "ResourceURL"];
+}
+
+// Contributor ...
+message Contributor {
+	option (gogoproto.goproto_getters) = false;
+	option (gogoproto.typedecl) = false;
+	string resource_url = 1 [(gogoproto.customname) = "ResourceURL"];
+	string username = 2;
+}
+
+// DatabaseService ...
+message DatabaseService {
+	option (gogoproto.goproto_getters) = false;
+	option (gogoproto.typedecl) = false;
+}
+
+// Format ...
+message Format {
+	option (gogoproto.goproto_getters) = false;
+	option (gogoproto.typedecl) = false;
+	repeated string descriptions = 1;
+	string name = 2;
+	string qty = 3;
+}
+
+// Identifier ...
+message Identifier {
+	option (gogoproto.goproto_getters) = false;
+	option (gogoproto.typedecl) = false;
+	string type = 1;
+	string value = 2;
+}
+
+// Image ...
+message Image {
+	option (gogoproto.goproto_getters) = false;
+	option (gogoproto.typedecl) = false;
+	int64 height = 1 [(gogoproto.casttype) = "int"];
+	int64 width = 2 [(gogoproto.casttype) = "int"];
+	string resource_url = 3 [(gogoproto.customname) = "ResourceURL"];
+	string type = 4;
+	string uri = 5 [(gogoproto.customname) = "URI"];
+	string uri150 = 6 [(gogoproto.customname) = "URI150"];
+}
+
+// LabelSource ...
+message LabelSource {
+	option (gogoproto.goproto_getters) = false;
+	option (gogoproto.typedecl) = false;
+	string catno = 1;
+	string entity_type = 2;
+	int64 id = 3 [(gogoproto.casttype) = "int", (gogoproto.customname) = "ID"];
+	string name = 4;
+	string resource_url = 5 [(gogoproto.customname) = "ResourceURL"];
+}
+
+// Member ...
+message Member {
+	option (gogoproto.goproto_getters) = false;
+	option (gogoproto.typedecl) = false;
+	bool active = 1;
+	int64 id = 2 [(gogoproto.casttype) = "int", (gogoproto.customname) = "ID"];
+	string name = 3;
+	string resource_url = 4 [(gogoproto.customname) = "ResourceURL"];
+}
+
+// Page ...
+message Page {
+	option (gogoproto.goproto_getters) = false;
+	option (gogoproto.typedecl) = false;
+	int64 per_page = 1 [(gogoproto.casttype) = "int"];
+	int64 items = 2 [(gogoproto.casttype) = "int"];
+	int64 page = 3 [(gogoproto.casttype) = "int"];
+	URLsList urls = 4 [(gogoproto.customname) = "URLs", (gogoproto.nullable) = false];
+	int64 pages = 5 [(gogoproto.casttype) = "int"];
+}
+
+// Rating ...
+message Rating {
+	option (gogoproto.goproto_getters) = false;
+	option (gogoproto.typedecl) = false;
+	float average = 1;
+	int64 count = 2 [(gogoproto.casttype) = "int"];
+}
+
+// ReleaseSource ...
+message ReleaseSource {
+	option (grpc.gateway.protoc_gen_swagger.options.openapiv2_schema) = {
+		json_schema: {
+            title: "ReleaseSource"
+			type: OBJECT
+		}
+    };
+
+	option (gogoproto.goproto_getters) = false;
+	option (gogoproto.typedecl) = false;
+	string artist = 1;
+	string catno = 2;
+	string format = 3;
+	int64 id = 4 [(gogoproto.casttype) = "int", (gogoproto.customname) = "ID"];
+	string resource_url = 5 [(gogoproto.customname) = "ResourceURL"];
+	string status = 6;
+	string thumb = 7;
+	string title = 8;
+	int64 year = 9 [(gogoproto.casttype) = "int"];
+	int64 main_release = 10 [(gogoproto.casttype) = "int"];
+	string role = 11;
+	string type = 12;
+}
+
+// Result describes a part of search result
+message Result {
+	option (gogoproto.goproto_getters) = false;
+	option (gogoproto.typedecl) = false;
+	repeated string style = 1;
+	string thumb = 2;
+	string title = 3;
+	string country = 4;
+	repeated string format = 5;
+	string uri = 6 [(gogoproto.customname) = "URI"];
+	Community community = 7 [(gogoproto.nullable) = false];
+	repeated string label = 8;
+	string catno = 9;
+	string year = 10;
+	repeated string genre = 11;
+	string resource_url = 12 [(gogoproto.customname) = "ResourceURL"];
+	string type = 13;
+	int64 id = 14 [(gogoproto.casttype) = "int", (gogoproto.customname) = "ID"];
+}
+
+// SearchService ...
+message SearchService {
+	option (gogoproto.goproto_getters) = false;
+	option (gogoproto.typedecl) = false;
+}
+
+// Sublable ...
+message Sublable {
+	option (gogoproto.goproto_getters) = false;
+	option (gogoproto.typedecl) = false;
+	string resource_url = 1 [(gogoproto.customname) = "ResourceURL"];
+	int64 id = 2 [(gogoproto.casttype) = "int", (gogoproto.customname) = "ID"];
+	string name = 3;
+}
+
+// Submitter ...
+message Submitter {
+	option (gogoproto.goproto_getters) = false;
+	option (gogoproto.typedecl) = false;
+	string resource_url = 1 [(gogoproto.customname) = "ResourceURL"];
+	string username = 2;
+}
+
+// Track ...
+message Track {
+	option (gogoproto.goproto_getters) = false;
+	option (gogoproto.typedecl) = false;
+	string duration = 1;
+	string position = 2;
+	string title = 3;
+	string type = 4;
+	repeated ArtistSource extraartists = 5 [(gogoproto.nullable) = false];
+	repeated ArtistSource artists = 6 [(gogoproto.nullable) = false];
+}
+
+// URLsList ...
+message URLsList {
+	option (gogoproto.goproto_getters) = false;
+	option (gogoproto.typedecl) = false;
+	string last = 1;
+	string next = 2;
+}
+
+// Version ...
+message Version {
+	option (gogoproto.goproto_getters) = false;
+	option (gogoproto.typedecl) = false;
+	string catno = 1;
+	string country = 2;
+	string format = 3;
+	int64 id = 4 [(gogoproto.casttype) = "int", (gogoproto.customname) = "ID"];
+	string label = 5;
+	string released = 6;
+	string resource_url = 7 [(gogoproto.customname) = "ResourceURL"];
+	string status = 8;
+	string thumb = 9;
+	string title = 10;
+}
+
+// Video ...
+message Video {
+	option (gogoproto.goproto_getters) = false;
+	option (gogoproto.typedecl) = false;
+	string description = 1;
+	int64 duration = 2 [(gogoproto.casttype) = "int"];
+	bool embed = 3;
+	string title = 4;
+	string uri = 5 [(gogoproto.customname) = "URI"];
+}
+
+message ListParams {
+	string artist = 1;
+	string type = 2;
+	string title = 3;
+}
+
+message GetParams {
+	string id = 1;
+}
+
+message SearchParams {
+    string query = 1;
+    string type = 2;
+    string title = 3;
+    string releaseTitle = 4;
+    string credit = 5;
+    string artist = 6;
+    string anv = 7;
+    string label = 8;
+    string genre = 9;
+    string country = 10;
+    string year = 11;
+    string format = 12;
+    string catno = 13;
+    string barcode = 14;
+    string track = 15;
+    string submitter = 16;
+    string contributor = 17;
+}
+
+message StoreParams {
+    string id = 1;
+}
+
+message HealthRequest {
+	string uptime = 1;
+	string machine = 2;
+}
+
+message HealthResponse {
+	string uptime = 1;
+	string machine = 2;
+}
+
+message BadRequest {
+	option (grpc.gateway.protoc_gen_swagger.options.openapiv2_schema) = {
+		json_schema: {
+            title: "BadRequest"
+			type: OBJECT
+		}
+	};
+	
+	int64 code = 1;
+	string message = 2;
+}
+
+option (grpc.gateway.protoc_gen_swagger.options.openapiv2_swagger) = {
+	info: {
+		title: "Vinyl API";
+        version: "0.0.1";
+        description: "This API will give access to vinyl data";
+		contact: {
+			url: "https://ninneman.org";
+			email: "alex@ninneman.com";
+		};
+    };
+    host: "api.alexninneman.com";
+    schemes: HTTP;
+    schemes: HTTPS;
+    consumes: "application/json";
+    produces: "application/json";
+    security_definitions: {
+		security: {
+			key: "BasicAuth";
+			value: {
+				type: TYPE_BASIC;
+			}
+		}
+    };
+    responses: {
+		key: "400";
+		value: {
+            description: "Bad Request.";
+            schema: {
+                json_schema: {
+                    ref: ".vinyl.BadRequest";
+                }
+            }
+		}
+	}
+	responses: {
+		key: "401";
+		value: {
+			description: "Unauthorized";
+			schema: {
+                json_schema: {
+                    ref: ".vinyl.BadRequest";
+                }
+            }
+		}
+	}
+	responses: {
+		key: "403";
+		value: {
+			description: "Forbidden";
+			schema: {
+                json_schema: {
+                    ref: ".vinyl.BadRequest";
+                }
+            }
+		}
+    }
+    responses: {
+		key: "500";
+		value: {
+			description: "Internal Server Error";
+			schema: {
+                json_schema: {
+                    ref: ".vinyl.BadRequest";
+                }
+            }
+		}
+    }
+    responses: {
+		key: "502";
+		value: {
+			description: "Bad Gateway";
+			schema: {
+                json_schema: {
+                    ref: ".vinyl.BadRequest";
+                }
+            }
+		}
+    }
+    responses: {
+		key: "503";
+		value: {
+			description: "Service Unavailable";
+			schema: {
+                json_schema: {
+                    ref: ".vinyl.BadRequest";
+                }
+            }
+		}
+	}
+};
+
+service Vinyl {
+	rpc Health(HealthRequest) returns (HealthResponse) {
+		option (google.api.http) = {
+			get: "/v0/health";
+		};
+		option (grpc.gateway.protoc_gen_swagger.options.openapiv2_operation) = {
+			description: "Returns the current state of the service";
+			summary: "Health Check";
+		};
+	}
+    rpc List(ListParams) returns (stream ReleaseSource) {
+		option (google.api.http) = {
+            get: "/vinyls";
+        };
+        option (grpc.gateway.protoc_gen_swagger.options.openapiv2_operation) = {
+			description: "A list of vinyl objects.";
+			summary: "Get Registered Vinyls";
+		};
+	}
+    rpc Get(GetParams) returns (ReleaseSource) {
+		option (google.api.http) = {
+            get: "/vinyls/{id}";
+        };
+        option (grpc.gateway.protoc_gen_swagger.options.openapiv2_operation) = {
+			description: "Retrieve a specific vinyl object.";
+			summary: "Get a Registed Vinyl";
+		};
+	}
+    rpc Search(SearchParams) returns (stream ReleaseSource) {
+		option (google.api.http) = {
+			post: "/search";
+			body: "*";
+        };
+        option (grpc.gateway.protoc_gen_swagger.options.openapiv2_operation) = {
+			description: "Search for a vinyl release";
+			summary: "Search for vinyls that are distributed";
+		};
+	}
+    rpc Store(StoreParams) returns (ReleaseSource) {
+		option (google.api.http) = {
+            put: "/vinyls/{id}";
+        };
+        option (grpc.gateway.protoc_gen_swagger.options.openapiv2_operation) = {
+			description: "Store a vinyl in a users personal registry";
+			summary: "Register a vinyl";
+		};
+	}
+}

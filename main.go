@@ -1,3 +1,0 @@
-package jams
-
-func NewServer
