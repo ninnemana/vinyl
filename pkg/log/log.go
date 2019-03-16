@@ -36,7 +36,7 @@ func customTimeEncoder(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
 	enc.AppendString(t.Format(customTimeFormat))
 }
 
-func Init() error {
+func Init() (*zap.Logger, error) {
 	globalLevel := zapcore.Level(defaultLevel)
 
 	// High-priority output should also go to standard error, and low-priority
@@ -78,10 +78,9 @@ func Init() error {
 		Logger.Warn("time format for logger is not provided - use zap default")
 	}
 
-	// Make sure that log statements internal to gRPC library are logged using the zapLogger as well.
 	grpc_zap.ReplaceGrpcLogger(Logger)
 
-	return nil
+	return Logger, nil
 }
 
 func UnaryServerInterceptor() grpc.UnaryServerInterceptor {
