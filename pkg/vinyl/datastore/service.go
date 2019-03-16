@@ -93,7 +93,23 @@ Loop:
 }
 
 func (s *Service) Get(ctx context.Context, p *vinyl.GetParams) (*vinyl.ReleaseSource, error) {
-	return nil, nil
+	if p.GetId() == "" {
+		return nil, vinyl.ErrInvalidGetParams
+	}
+
+	q := datastore.NewQuery(Entity).Namespace(s.environment)
+	q = q.Filter("ID =", p.GetId())
+
+	var res vinyl.ReleaseSource
+	_, err := s.client.Run(ctx, q).Next(&res)
+	switch err {
+	case nil:
+		return &res, nil
+	case iterator.Done:
+		return nil, vinyl.ErrNotFound
+	default:
+		return nil, errors.Wrap(err, "failed to retrieve record from the datastore")
+	}
 }
 
 func (s *Service) Search(p *vinyl.SearchParams, srv vinyl.Vinyl_SearchServer) error {
