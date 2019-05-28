@@ -2,9 +2,11 @@ package datastore
 
 import (
 	"context"
+	"os"
 	"strconv"
 	"strings"
 
+	"github.com/ninnemana/vinyl/pkg/log"
 	"github.com/ninnemana/vinyl/pkg/vinyl"
 
 	"cloud.google.com/go/datastore"
@@ -13,6 +15,7 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
+	"google.golang.org/grpc"
 )
 
 const (
@@ -28,6 +31,22 @@ type Service struct {
 	discogs     *discogs.Client
 	environment string
 	log         *zap.Logger
+}
+
+func Register(server *grpc.Server) error {
+
+	zlg, err := log.Init()
+	if err != nil {
+		return errors.Wrap(err, "failed to create logger")
+	}
+
+	svc, err := New(context.Background(), zlg, os.Getenv("GCE_PROJECT_ID"))
+	if err != nil {
+		return errors.Wrap(err, "failed to create micropost service")
+	}
+
+	vinyl.RegisterVinylServer(server, svc)
+	return nil
 }
 
 func New(ctx context.Context, log *zap.Logger, projectID string) (*Service, error) {

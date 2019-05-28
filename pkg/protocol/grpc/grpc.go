@@ -34,7 +34,7 @@ func Serve() error {
 		MetricPrefix: "vinyl-registry",
 	})
 	if err != nil {
-		return errors.Wrap(err, "failed to create stats exporter")
+		return errors.Wrap(err, "failed to create stat exporter")
 	}
 	// It is imperative to invoke flush before your main function exits
 	defer sd.Flush()
