@@ -1,6 +1,7 @@
 package tcp
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -36,7 +37,15 @@ func (h *Handler) rpc(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) http(w http.ResponseWriter, r *http.Request) {
 	h.server.log.Info("Handling HTTP Call", zap.String("path", r.URL.Path))
-	h.server.gateway.ServeHTTP(w, r)
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	switch r.Method {
+	case http.MethodOptions:
+		h.server.ServeCORS(w, r)
+	default:
+		h.server.gateway.ServeHTTP(w, r)
+	}
+	fmt.Println("setting CORS header")
+	fmt.Println(w.Header())
 }
 
 func (h *Handler) openapi(w http.ResponseWriter, r *http.Request) {

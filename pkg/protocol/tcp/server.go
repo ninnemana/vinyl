@@ -151,6 +151,12 @@ func (s *Server) Flush() {
 	}
 }
 
+func (s *Server) ServeCORS(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+	w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
+}
+
 // gwReg will save a gateway registration function for later when the server is started
 func (s *Server) gwReg(gwrf gwRegFunc) {
 	s.gwRegFuncs = append(s.gwRegFuncs, gwrf)
