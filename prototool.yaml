@@ -14,11 +14,10 @@ protoc:
   # By default, the directory of the config file is included,
   # or the current directory if there is no config file.
   includes:
-   - ../../grpc-ecosystem/grpc-gateway/third_party/googleapis
+   - ../../../../pkg/mod/github.com/grpc-ecosystem/grpc-gateway@v1.11.3/third_party/googleapis
+   - ../../../../pkg/mod/github.com/grpc-ecosystem/grpc-gateway@v1.11.3
    - ../../gogo/protobuf/protobuf
    - ../../../
-   - ../../grpc-ecosystem/grpc-gateway
-   - ../../grpc-ecosystem/grpc-gateway/third_party/googleapis
    - .
 
 
