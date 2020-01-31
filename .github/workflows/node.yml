@@ -47,6 +47,7 @@ jobs:
     - name: Build UI
       run: |
         cd $HOME/go/src/github.com/$GITHUB_REPOSITORY/ui
-        npm build
-        npm lint
+        npm i
+        npm run-script build
+        npm run-script lint
 
