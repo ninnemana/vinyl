@@ -25,6 +25,7 @@ prototool: godeps
 	@chmod u+x ./prototool
 
 generate: prototool
+	@ls -l .
 	@./prototool generate prototool.yaml
 	@npm install -g redoc-cli
 	@redoc-cli bundle \
