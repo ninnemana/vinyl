@@ -19,9 +19,8 @@ godeps:
 
 prototool: godeps
 	@curl -sSL \
-		https://github.com/uber/prototool/releases/download/v1.9.0/prototool-Darwin-x86_64 \
+		https://github.com/uber/prototool/releases/download/v1.9.0/prototool-${UNAME_OS}-${UNAME_ARCH} \
 		-o ./prototool
-	@echo "making prototool executable"
 	@chmod u+x ./prototool
 
 generate: prototool
