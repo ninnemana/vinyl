@@ -2,12 +2,14 @@ package tcp
 
 import (
 	"context"
+	"os"
 
 	"github.com/ninnemana/drudge"
 	"github.com/ninnemana/vinyl/pkg/vinyl"
+	"github.com/ninnemana/vinyl/pkg/vinyl/datastore"
 	"github.com/uber/jaeger-client-go/config"
+	"go.uber.org/zap"
 	"google.golang.org/grpc"
-	// "github.com/ninnemana/vinyl/pkg/vinyl/datastore"
 )
 
 const (
@@ -43,28 +45,18 @@ func Serve() error {
 }
 
 func Register(server *grpc.Server) error {
-	// options := []option.ClientOption{}
 
-	// if os.Getenv("GCP_SVC_ACCOUNT") != "" {
-	// 	js, err := base64.StdEncoding.DecodeString(os.Getenv("GCP_SVC_ACCOUNT"))
-	// 	if err != nil {
-	// 		return errors.WithMessage(err, "failed to decode service account")
-	// 	}
+	log, err := zap.NewDevelopment()
+	if err != nil {
+		return err
+	}
 
-	// 	options = append(options, option.WithCredentialsJSON(js))
-	// }
+	service, err := datastore.New(context.Background(), log, os.Getenv("GCP_PROJECT_ID"))
+	if err != nil {
+		return err
+	}
 
-	// client, err := firestore.NewClient(context.Background(), os.Getenv("GCP_PROJECT_ID"), options...)
-	// if err != nil {
-	// 	return errors.WithMessage(err, "failed to create Firestore client")
-	// }
-
-	// service := &Service{
-	// 	albums: map[int32]*vinyltap.Album{},
-	// 	client: client,
-	// }
-
-	// vinyltap.RegisterTapServer(server, service)
+	vinyl.RegisterVinylServer(server, service)
 
 	return nil
 }
