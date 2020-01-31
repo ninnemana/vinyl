@@ -1,0 +1,7 @@
+openapi
+sdks
+prototool
+certs
+static
+pkg/vinyl/*pb.go
+pkg/vinyl/*pb.gw.go
