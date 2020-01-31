@@ -26,11 +26,6 @@ prototool: godeps
 
 generate: prototool
 	@./prototool generate prototool.yaml --debug
-	@npm install -g redoc-cli
-	@redoc-cli bundle \
-		${PKG}/openapi/vinyl.swagger.json \
-		-o="${PKG}/openapi/index.html" \
-		--title "Vinyl Registry API"
 
 build: generate
 	go build -v ./cmd/server
@@ -47,5 +42,12 @@ gen_cert:
 
 run: generate
 	@go run ./cmd/server
+
+gen_docs: generate
+	@npm install -g redoc-cli
+	@redoc-cli bundle \
+		${PKG}/openapi/vinyl.swagger.json \
+		-o="${PKG}/openapi/index.html" \
+		--title "Vinyl Registry API"
 
 .PHONY: generate
