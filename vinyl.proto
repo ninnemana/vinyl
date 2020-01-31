@@ -1,7 +1,7 @@
 syntax = "proto3";
 package vinyl;
 
-import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+import "gogoproto/gogo.proto";
 import "google/api/annotations.proto";
 // import "google/protobuf/empty.proto";
 import "protoc-gen-swagger/options/annotations.proto";
@@ -170,6 +170,7 @@ message ReleaseSource {
 	int64 main_release = 10 [(gogoproto.casttype) = "int"];
 	string role = 11;
 	string type = 12;
+	string userID = 13;
 }
 
 // Result describes a part of search result
