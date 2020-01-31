@@ -32,6 +32,13 @@ generate: prototool
 		-o="${PKG}/openapi/index.html" \
 		--title "Vinyl Registry API"
 
+build: generate
+	go build -v ./cmd/server
+	go build -v ./cmd/client
+
+test: generate
+	go test -cover ./...
+
 gen_cert:
 	rm -rf certs
 	mkdir -p certs
