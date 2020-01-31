@@ -16,6 +16,7 @@ godeps:
 	@go get github.com/grpc-ecosystem/grpc-gateway/protoc-gen-grpc-gateway@v1.11.3
 	@go get github.com/grpc-ecosystem/grpc-gateway/protoc-gen-swagger@v1.11.3
 	@go get github.com/golang/protobuf/protoc-gen-go@v1.3.2
+	@go get github.com/gogo/protobuf/gogoproto@v1.3.1
 
 prototool: godeps
 	@curl -sSL \
