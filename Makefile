@@ -25,7 +25,7 @@ prototool: godeps
 	@chmod u+x ./prototool
 
 generate: prototool
-	@./prototool generate prototool.yaml --debug
+	@./prototool generate prototool.yaml
 	@npm install -g redoc-cli
 	@redoc-cli bundle \
 		${PKG}/openapi/vinyl.swagger.json \
@@ -37,5 +37,8 @@ gen_cert:
 	mkdir -p certs
 	openssl genrsa -out ./certs/server.key 2048
 	openssl req -new -x509 -key ./certs/server.key -out ./certs/server.pem -days 3650
+
+run: generate
+	@go run ./cmd/server
 
 .PHONY: generate
