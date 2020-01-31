@@ -56,6 +56,7 @@ func New(ctx context.Context, log *zap.Logger, projectID string) (*Service, erro
 	}, nil
 }
 
+// List retrieves all the entries that are associated with the user.
 func (s *Service) List(p *vinyl.ListParams, srv vinyl.Vinyl_ListServer) error {
 
 	q := datastore.NewQuery(Entity).Namespace(s.environment)
