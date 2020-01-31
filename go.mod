@@ -12,6 +12,7 @@ require (
 	github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e // indirect
 	github.com/golang/protobuf v1.3.2
 	github.com/googleapis/gax-go v2.0.2+incompatible // indirect
+	github.com/grpc-ecosystem/go-grpc-middleware v1.1.0
 	github.com/grpc-ecosystem/grpc-gateway v1.11.3
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/irlndts/go-discogs v0.2.3
