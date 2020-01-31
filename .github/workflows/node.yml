@@ -1,4 +1,4 @@
-name: Go
+name: Node
 on: [push]
 jobs:
 
