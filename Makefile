@@ -25,7 +25,7 @@ prototool: godeps
 	@chmod u+x ./prototool
 
 generate: prototool
-	@./prototool generate prototool.yaml --debug
+	@./prototool generate prototool.yaml
 
 build: generate
 	go build -v ./cmd/server
