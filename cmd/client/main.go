@@ -18,7 +18,7 @@ func main() {
 	}
 	defer conn.Close()
 
-	svc := vinyl.NewVinylServiceClient(conn)
+	svc := vinyl.NewVinylClient(conn)
 	client, err := svc.Search(context.Background(), &vinyl.SearchParams{
 		Artist: "Kendrick Lamar",
 	})

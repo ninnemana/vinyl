@@ -16,21 +16,23 @@ godeps:
 	@go get github.com/grpc-ecosystem/grpc-gateway/protoc-gen-grpc-gateway@v1.11.3
 	@go get github.com/grpc-ecosystem/grpc-gateway/protoc-gen-swagger@v1.11.3
 	@go get github.com/golang/protobuf/protoc-gen-go@v1.3.2
+	@go get github.com/gogo/protobuf/gogoproto@v1.3.1
 
 prototool: godeps
 	@curl -sSL \
-		https://github.com/uber/prototool/releases/download/v1.9.0/prototool-Darwin-x86_64 \
+		https://github.com/uber/prototool/releases/download/v1.9.0/prototool-${UNAME_OS}-${UNAME_ARCH} \
 		-o ./prototool
-	@echo "making prototool executable"
 	@chmod u+x ./prototool
 
 generate: prototool
-	@./prototool generate prototool.yaml
-	@npm install -g redoc-cli
-	@redoc-cli bundle \
-		${PKG}/openapi/vinyl.swagger.json \
-		-o="${PKG}/openapi/index.html" \
-		--title "Vinyl Registry API"
+	@./prototool generate prototool.yaml --debug
+
+build: generate
+	go build -v ./cmd/server
+	go build -v ./cmd/client
+
+test: generate
+	go test -cover ./...
 
 gen_cert:
 	rm -rf certs
@@ -40,5 +42,12 @@ gen_cert:
 
 run: generate
 	@go run ./cmd/server
+
+gen_docs: generate
+	@npm install -g redoc-cli
+	@redoc-cli bundle \
+		${PKG}/openapi/vinyl.swagger.json \
+		-o="${PKG}/openapi/index.html" \
+		--title "Vinyl Registry API"
 
 .PHONY: generate
