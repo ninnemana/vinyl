@@ -24,7 +24,7 @@ prototool: godeps
 	@chmod u+x ./prototool
 
 generate: prototool
-	@./prototool generate prototool.yaml
+	@./prototool generate prototool.yaml --debug
 	@npm install -g redoc-cli
 	@redoc-cli bundle \
 		${PKG}/openapi/vinyl.swagger.json \
