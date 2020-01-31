@@ -170,6 +170,7 @@ message ReleaseSource {
 	int64 main_release = 10 [(gogoproto.casttype) = "int"];
 	string role = 11;
 	string type = 12;
+	string userID = 13;
 }
 
 // Result describes a part of search result
