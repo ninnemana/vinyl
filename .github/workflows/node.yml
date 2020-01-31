@@ -46,7 +46,7 @@ jobs:
 
     - name: Build UI
       run: |
-        cd ui
+        $GOPATH/src/github.com/$GITHUB_REPOSITORY/ui
         npm build
         npm lint
 
