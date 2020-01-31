@@ -16,7 +16,7 @@ protoc:
   includes:
    - ../../../../pkg/mod/github.com/grpc-ecosystem/grpc-gateway@v1.11.3/third_party/googleapis
    - ../../../../pkg/mod/github.com/grpc-ecosystem/grpc-gateway@v1.11.3
-   - ../../gogo/protobuf/protobuf
+   - ../../../../pkg/mod/github.com/gogo/protobuf@v1.3.1/protobuf
    - ../../../
    - .
 

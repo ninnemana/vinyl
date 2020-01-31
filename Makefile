@@ -25,7 +25,6 @@ prototool: godeps
 	@chmod u+x ./prototool
 
 generate: prototool
-	@ls ../../../../pkg/mod/github.com/gogo/protobuf@v1.3.1
 	@./prototool generate prototool.yaml --debug
 	@npm install -g redoc-cli
 	@redoc-cli bundle \
