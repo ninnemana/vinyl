@@ -8,6 +8,7 @@ import (
 
 	"github.com/ninnemana/vinyl/pkg/log"
 	"github.com/ninnemana/vinyl/pkg/vinyl"
+	"golang.org/x/sync/errgroup"
 
 	"cloud.google.com/go/datastore"
 	discogs "github.com/irlndts/go-discogs"
@@ -112,24 +113,67 @@ Loop:
 	return nil
 }
 
-func (s *Service) Get(ctx context.Context, p *vinyl.GetParams) (*vinyl.ReleaseSource, error) {
+func (s *Service) Get(ctx context.Context, p *vinyl.GetParams) (*vinyl.Result, error) {
 	if p.GetId() == "" {
 		return nil, vinyl.ErrInvalidGetParams
 	}
 
-	q := datastore.NewQuery(Entity).Namespace(s.environment)
-	q = q.Filter("ID =", p.GetId())
+	var (
+		stored *vinyl.Result
+		result *vinyl.Result
+	)
 
-	var res vinyl.ReleaseSource
-	_, err := s.client.Run(ctx, q).Next(&res)
-	switch err {
-	case nil:
-		return &res, nil
-	case iterator.Done:
-		return nil, vinyl.ErrNotFound
-	default:
-		return nil, errors.Wrap(err, "failed to retrieve record from the datastore")
+	g, ctx := errgroup.WithContext(ctx)
+	g.Go(func() error {
+		r, err := s.getStored(ctx, p)
+		if err == vinyl.ErrNotFound {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+
+		stored = r
+		return nil
+	})
+
+	g.Go(func() error {
+		id, err := strconv.Atoi(p.GetId())
+		if err != nil {
+			return errors.New("failed to parse identifier `" + p.GetId() + "`")
+		}
+
+		res, err := s.discogs.Database.Release(id)
+		if err != nil {
+			return err
+		}
+
+		result = &vinyl.Result{
+			// Catno:       res.Catno,
+			// Format:      res.Formats,
+			Id:          int64(res.ID),
+			Title:       res.Title,
+			ResourceUrl: res.ResourceURL,
+			Thumb:       res.Thumb,
+			// Year:        year,
+			// Type:        res.,
+		}
+		return nil
+	})
+
+	if err := g.Wait(); err != nil {
+		return nil, err
 	}
+
+	if stored != nil {
+		return stored, nil
+	}
+
+	if result != nil {
+		return result, nil
+	}
+
+	return nil, vinyl.ErrNotFound
 }
 
 func (s *Service) Search(p *vinyl.SearchParams, srv vinyl.Vinyl_SearchServer) error {
@@ -182,11 +226,27 @@ func (s *Service) Search(p *vinyl.SearchParams, srv vinyl.Vinyl_SearchServer) er
 	return nil
 }
 
-func (s *Service) Store(ctx context.Context, p *vinyl.StoreParams) (*vinyl.ReleaseSource, error) {
+func (s *Service) Store(ctx context.Context, p *vinyl.Result) (*vinyl.Result, error) {
 
 	return nil, nil
 }
 
 func (s *Service) Health(_ context.Context, _ *vinyl.HealthRequest) (*vinyl.HealthResponse, error) {
 	return &vinyl.HealthResponse{}, nil
+}
+
+func (s *Service) getStored(ctx context.Context, p *vinyl.GetParams) (*vinyl.Result, error) {
+	q := datastore.NewQuery(Entity).Namespace(s.environment)
+	q = q.Filter("ID =", p.GetId())
+
+	var res vinyl.Result
+	_, err := s.client.Run(ctx, q).Next(&res)
+	switch err {
+	case nil:
+		return &res, nil
+	case iterator.Done:
+		return nil, vinyl.ErrNotFound
+	default:
+		return nil, errors.Wrap(err, "failed to retrieve record from the datastore")
+	}
 }

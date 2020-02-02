@@ -429,7 +429,7 @@ service Vinyl {
 			summary: "Get Registered Vinyls";
 		};
 	}
-    rpc Get(GetParams) returns (ReleaseSource) {
+    rpc Get(GetParams) returns (Result) {
 		option (google.api.http) = {
             get: "/vinyls/{id}";
         };
@@ -448,7 +448,7 @@ service Vinyl {
 			summary: "Search for vinyls that are distributed";
 		};
 	}
-    rpc Store(StoreParams) returns (ReleaseSource) {
+    rpc Store(Result) returns (Result) {
 		option (google.api.http) = {
             put: "/vinyls/{id}";
         };
