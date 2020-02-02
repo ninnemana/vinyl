@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"log"
 
 	"github.com/ninnemana/vinyl/pkg/vinyl"
@@ -11,7 +12,7 @@ import (
 )
 
 func main() {
-	conn, err := grpc.DialContext(context.Background(), ":8080", grpc.WithInsecure())
+	conn, err := grpc.DialContext(context.Background(), ":8081", grpc.WithInsecure())
 	// conn, err := grpc.Dial(":8080")
 	if err != nil {
 		log.Fatalf("failed to dial service: %v", err)
@@ -28,6 +29,9 @@ func main() {
 
 	for {
 		msg, err := client.Recv()
+		if err == io.EOF {
+			break
+		}
 		if err != nil {
 			log.Printf("failed to receive release: %v\n", err)
 			break
