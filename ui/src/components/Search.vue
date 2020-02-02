@@ -17,7 +17,7 @@ export default class Search extends Vue {
     
     private handleSubmit() {
         this.$store.dispatch('search', this.query);
-        this.$router.push('/search');
+        this.$router.push(`/search?query=${this.query}`);
     }
 }
 </script>

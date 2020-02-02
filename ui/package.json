@@ -3,7 +3,7 @@
 	"version": "0.1.0",
 	"private": true,
 	"scripts": {
-		"serve": "VUE_APP_API_DOMAIN=http://localhost:8000 vue-cli-service serve",
+		"serve": "VUE_APP_API_DOMAIN=http://localhost:8080 vue-cli-service serve",
 		"build": "vue-cli-service build",
 		"lint": "vue-cli-service lint",
 		"test:e2e": "vue-cli-service test:e2e",
@@ -12,8 +12,11 @@
 	"dependencies": {
 		"@types/request": "^2.48.1",
 		"axios": "^0.18.0",
+		"can-ndjson-stream": "^1.0.2",
+		"jsonpipe": "^2.2.0",
 		"register-service-worker": "^1.6.2",
 		"request": "^2.88.0",
+		"stream-http": "^3.1.0",
 		"vue": "^2.6.6",
 		"vue-class-component": "^6.0.0",
 		"vue-property-decorator": "^7.0.0",
