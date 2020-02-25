@@ -32,4 +32,4 @@ pkg/vinyl/*pb.gw.go
 sdks/
 client
 server
-
+.env
