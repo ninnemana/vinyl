@@ -14,12 +14,11 @@ protoc:
   # By default, the directory of the config file is included,
   # or the current directory if there is no config file.
   includes:
-   - ../../../../pkg/mod/github.com/grpc-ecosystem/grpc-gateway@v1.11.3/third_party/googleapis
-   - ../../../../pkg/mod/github.com/grpc-ecosystem/grpc-gateway@v1.11.3
-   - ../../../../pkg/mod/github.com/gogo/protobuf@v1.3.1
-   - ../../../
-   - .
-
+    - ../../../../pkg/mod/github.com/grpc-ecosystem/grpc-gateway@v1.11.3/third_party/googleapis
+    - ../../../../pkg/mod/github.com/grpc-ecosystem/grpc-gateway@v1.11.3
+    - ../../../../pkg/mod/github.com/gogo/protobuf@v1.3.1
+    - ../../../
+    - .
 
   # If not set, compile will fail if there are unused imports.
   # Setting this will ignore unused imports.
@@ -27,113 +26,101 @@ protoc:
 
 # Create directives.
 # create:
-  # List of mappings from relative directory to base package.
-  # This affects how packages are generated with create.
-  # packages:
-    # This means that a file created "foo.proto" in the current directory will have package "bar".
-    # A file created "a/b/foo.proto" will have package "bar.a.b".
-    # - directory: .
-    #  name: bar
-    # This means that a file created "idl/code.uber/a/b/c.proto" will have package "uber.a.b".
-    #- directory: idl/code.uber
-    #  name: uber
+# List of mappings from relative directory to base package.
+# This affects how packages are generated with create.
+# packages:
+# This means that a file created "foo.proto" in the current directory will have package "bar".
+# A file created "a/b/foo.proto" will have package "bar.a.b".
+# - directory: .
+#  name: bar
+# This means that a file created "idl/code.uber/a/b/c.proto" will have package "uber.a.b".
+#- directory: idl/code.uber
+#  name: uber
 
 # Lint directives.
 lint:
   # Linter files to ignore.
-#  ignores:
-#    - id: RPC_NAMES_CAMEL_CASE
-#      files:
-#        - path/to/foo.proto
-#        - path/to/bar.proto
-#    - id: SYNTAX_PROTO3
-#      files:
-#        - path/to/foo.proto
+  #  ignores:
+  #    - id: RPC_NAMES_CAMEL_CASE
+  #      files:
+  #        - path/to/foo.proto
+  #        - path/to/bar.proto
+  #    - id: SYNTAX_PROTO3
+  #      files:
+  #        - path/to/foo.proto
 
   # Linter rules.
   # Run prototool list-all-linters to see all available linters.
- rules:
+  rules:
     # Determines whether or not to include the default set of linters.
-#    no_default: true
+    #    no_default: true
 
     # The specific linters to add.
-   add:
-    #  - ENUM_NAMES_CAMEL_CASE
-     - ENUM_NAMES_CAPITALIZED
+    add:
+      #  - ENUM_NAMES_CAMEL_CASE
+      - ENUM_NAMES_CAPITALIZED
 
-    # The specific linters to remove.
-   remove:
-     - ENUM_NAMES_CAMEL_CASE
-     - REQUEST_RESPONSE_NAMES_MATCH_RPC
-     - REQUEST_RESPONSE_TYPES_UNIQUE
+      # The specific linters to remove.
+    remove:
+      - ENUM_NAMES_CAMEL_CASE
+      - REQUEST_RESPONSE_NAMES_MATCH_RPC
+      - REQUEST_RESPONSE_TYPES_UNIQUE
 
 # Code generation directives.
 generate:
   # Options that will apply to all plugins of type go and gogo.
- go_options:
+  go_options:
     # The base import path. This should be the go path of the prototool.yaml file.
     # This is required if you have any go plugins.
-   import_path: .
+    import_path: .
 
     # Extra modifiers to include with Mfile=package.
-   extra_modifiers:
-     Mgoogle/protobuf/any.proto: github.com/gogo/protobuf/types
-     Mgoogle/protobuf/empty.proto: github.com/gogo/protobuf/types
+    extra_modifiers:
+      Mgoogle/protobuf/any.proto: github.com/gogo/protobuf/types
+      Mgoogle/protobuf/empty.proto: github.com/gogo/protobuf/types
 
-  # The list of plugins.
- plugins:
-   - name: swagger
-     type: go
-     output: openapi
-   - name: grpc-gateway
-     type: go
-     output: pkg/vinyl
-
-      # The plugin name. This will go to protoc with --name_out, so it either needs
-      # to be a built-in name (like java), or a plugin name with a binary
-      # protoc-gen-name.
-   - name: go
-
-      # The type, if any. Valid types are go, gogo.
-      # Use go if your plugin is a standard Golang plugin
-      # that uses github.com/golang/protobuf imports, use gogo
-      # if it uses github.com/gogo/protobuf imports. For protoc-gen-go
-      # use go, For protoc-gen-gogo, protoc-gen-gogoslick, etc, use gogo.
-     type: go
-
-      # Extra flags to specify.
-      # The only flag you will generally set is plugins=grpc for Golang.
-      # The Mfile=package flags are automatically set.
-      # ** Otherwise, generally do not set this unless you know what you are doing. **
-     flags: plugins=grpc
-
-      # The path to output generated files to.
-      # If the directory does not exist, it will be created when running generation.
-      # This needs to be a relative path.
-     output: pkg/vinyl
-
-  #  - name: yarpc-go
-  #    type: gogo
-  #    output: pkg/vinyl
-   - name: csharp
+    # The list of plugins.
+  plugins:
+    - name: swagger
+      type: go
+      output: openapi
+    - name: grpc-gateway
+      type: go
+      output:
+        pkg/vinyl
+        # The plugin name. This will go to protoc with --name_out, so it either needs
+        # to be a built-in name (like java), or a plugin name with a binary
+        # protoc-gen-name.
+    - name: go
 
       # The type, if any. Valid types are go, gogo.
       # Use go if your plugin is a standard Golang plugin
       # that uses github.com/golang/protobuf imports, use gogo
       # if it uses github.com/gogo/protobuf imports. For protoc-gen-go
       # use go, For protoc-gen-gogo, protoc-gen-gogoslick, etc, use gogo.
-    #  type: csharp
+      type:
+        go
+        # Extra flags to specify.
+        # The only flag you will generally set is plugins=grpc for Golang.
+        # The Mfile=package flags are automatically set.
+        # ** Otherwise, generally do not set this unless you know what you are doing. **
+      flags:
+        plugins=grpc
+        # The path to output generated files to.
+        # If the directory does not exist, it will be created when running generation.
+        # This needs to be a relative path.
+      output: pkg/vinyl
 
-      # Extra flags to specify.
-      # The only flag you will generally set is plugins=grpc for Golang.
-      # The Mfile=package flags are automatically set.
-      # ** Otherwise, generally do not set this unless you know what you are doing. **
-    #  flags: base_namespace=vinyl
+    #  - name: yarpc-go
+    #    type: gogo
+    #    output: pkg/vinyl
+    - name: csharp
+      output: sdks/csharp
 
-      # The path to output generated files to.
-      # If the directory does not exist, it will be created when running generation.
-      # This needs to be a relative path.
-     output: sdks/csharp
+    - name: java
+      output: sdks/java
 
-   - name: java
-     output: sdks/java
+    # - name: ts
+    #   path: ./node_modules/.bin/protoc-gen-ts
+    #   flags: import_style=commonjs,binary:sdks/javascript
+    #   output: ./sdks/javascript
