@@ -24,7 +24,7 @@ services:
       - 8080:8080
       - 8081:8081
     volumes:
-      - ./firebase-sa.json:/firebase_sa.json
+      - ./firebase-sa.json:/firebase-sa.json
     depends_on:
       - jaeger
   jaeger:
