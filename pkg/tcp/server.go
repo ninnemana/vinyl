@@ -2,14 +2,11 @@ package tcp
 
 import (
 	"context"
-	"os"
 
 	"github.com/ninnemana/drudge"
 	"github.com/ninnemana/vinyl/pkg/vinyl"
-	"github.com/ninnemana/vinyl/pkg/vinyl/datastore"
+	"github.com/ninnemana/vinyl/pkg/vinyl/firestore"
 	"github.com/uber/jaeger-client-go/config"
-	"go.uber.org/zap"
-	"google.golang.org/grpc"
 )
 
 const (
@@ -27,7 +24,7 @@ var (
 		},
 		SwaggerDir:    "openapi",
 		Handlers:      []drudge.Handler{vinyl.RegisterVinylHandler},
-		OnRegister:    Register,
+		OnRegister:    firestore.Register,
 		TraceExporter: drudge.Jaeger,
 	}
 )
@@ -42,21 +39,4 @@ func Serve() error {
 	options.TraceConfig = cfg
 
 	return drudge.Run(context.Background(), options)
-}
-
-func Register(server *grpc.Server) error {
-
-	log, err := zap.NewDevelopment()
-	if err != nil {
-		return err
-	}
-
-	service, err := datastore.New(context.Background(), log, os.Getenv("GCP_PROJECT_ID"))
-	if err != nil {
-		return err
-	}
-
-	vinyl.RegisterVinylServer(server, service)
-
-	return nil
 }
