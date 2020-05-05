@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"os"
 
 	"github.com/ninnemana/vinyl/pkg/vinyl"
 
@@ -12,6 +13,11 @@ import (
 )
 
 func main() {
+	if len(os.Args) < 2 {
+		usage()
+		return
+	}
+
 	conn, err := grpc.DialContext(context.Background(), ":8081", grpc.WithInsecure())
 	// conn, err := grpc.Dial(":8080")
 	if err != nil {
@@ -21,7 +27,7 @@ func main() {
 
 	svc := vinyl.NewVinylClient(conn)
 	client, err := svc.Search(context.Background(), &vinyl.SearchParams{
-		Artist: "Kendrick Lamar",
+		Artist: os.Args[1],
 	})
 	if err != nil {
 		log.Fatalf("failed to create search scanner: %v", err)
@@ -37,6 +43,12 @@ func main() {
 			break
 		}
 
-		fmt.Println(msg.GetYear(), msg.GetArtist(), msg.GetTitle(), msg.GetType())
+		fmt.Printf("Message: %+v\n", msg)
 	}
+}
+
+func usage() {
+	fmt.Printf("Vinyltap.io CLI\n----------\n\n")
+	fmt.Printf("\t Sub Commands\n")
+	fmt.Printf("\t\t search\n")
 }
