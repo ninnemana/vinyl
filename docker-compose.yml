@@ -9,7 +9,7 @@ services:
     depends_on:
       - api
     environment:
-      - VUE_APP_API_DOMAIN=http://localhost:8080 
+      - VUE_APP_API_DOMAIN=http://localhost:8080
   api:
     build:
       context: .
@@ -19,16 +19,27 @@ services:
       - DISCOGS_API_KEY
       - GOOGLE_APPLICATION_CREDENTIALS
       - JAEGER_AGENT_HOST=jaeger
-      - JAEGER_AGENT_PORT=16686
+      - JAEGER_AGENT_PORT=6831
     ports:
       - 8080:8080
       - 8081:8081
     volumes:
-      - ./firebase-sa.json:/firebase-sa.json
+      - $HOME/tmp:/tmp
+      - ./localhost:/app/localhost
     depends_on:
       - jaeger
+      - prometheus
+  prometheus:
+    image: prom/prometheus:v2.15.2
+    ports:
+      - 9090:9090
+    volumes:
+      - ./docker/prometheus/:/etc/prometheus/
+      - prometheus_data:/prometheus
   jaeger:
     image: jaegertracing/all-in-one:latest
     ports:
       - "6831:6831/udp"
       - "16686:16686"
+volumes:
+  prometheus_data:
