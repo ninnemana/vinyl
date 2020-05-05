@@ -31,7 +31,7 @@ var (
 
 type Service struct {
 	client      *firestore.Client
-	discogs     *discogs.Client
+	discogs     *discogs.Discogs
 	environment string
 	log         *zap.Logger
 }
@@ -58,7 +58,7 @@ func New(ctx context.Context, log *zap.Logger, projectID string) (*Service, erro
 		return nil, ErrInvalidLogger
 	}
 
-	disc, err := discogs.NewClient(&discogs.Options{
+	disc, err := discogs.New(&discogs.Options{
 		UserAgent: "Some Agent",
 		Token:     os.Getenv("DISCOGS_API_KEY"),
 	})
@@ -316,11 +316,17 @@ func toRelease(res *discogs.Release) *vinyl.Release {
 		Released:          res.Released,
 		ReleasedFormatted: res.ReleasedFormatted,
 		ResourceUrl:       res.ResourceURL,
-		Series:            res.Series,
-		Status:            res.Status,
-		Styles:            res.Styles,
-		Uri:               res.URI,
-		Year:              int64(res.Year),
+		Series: func(series []discogs.Series) []string {
+			r := make([]string, len(series))
+			for i := range series {
+				r[i] = series[i].Name
+			}
+			return r
+		}(res.Series),
+		Status: res.Status,
+		Styles: res.Styles,
+		Uri:    res.URI,
+		Year:   int64(res.Year),
 	}
 
 	result.Artists = make([]*vinyl.ArtistSource, len(res.Artists))
