@@ -13,6 +13,7 @@ export default new Vuex.Store({
 		searchError: {},
 		getError: {},
 		authorized: null,
+		account: {},
 	},
 	mutations: {
 		SET_SEARCH_TERM: (state, term) => {
@@ -41,10 +42,29 @@ export default new Vuex.Store({
 		SET_GET_ERROR: (state, error) => {
 			state.getError = error;
 		},
+		SET_ACCOUNT: (state, account) => {
+			state.account = account;
+		},
 	},
 	actions: {
 		setSearchPage({ commit }, page: number) {
 			commit('SET_SEARCH_PAGE', page);
+		},
+		createAccount({ commit }, account: AccountRequest) {
+			axios({
+				method: 'post',
+				url: '${process.env.VUE_APP_API_DOMAIN}/account/create',
+				data: account,
+			}).then((r: AxiosResponse) => {
+				commit('SET_ACCOUNT', r.data);
+			}).catch((error: { response: { data: {} } }) => {
+				if (!error.response) {
+					commit('SET_CREATE_ACCOUNT_ERROR', 'Failed to create account.');
+					return;
+				}
+
+				commit('SET_CREATE_ACCOUNT_ERROR', error.response.data);
+			});
 		},
 		search({ commit }, query: string) {
 			commit('SET_SEARCH_TERM', query)
@@ -90,3 +110,35 @@ export default new Vuex.Store({
 		},
 	}
 })
+
+export class AccountRequest {
+	private username: string;
+	private email: string;
+	private password: string;
+	private errors: Array<string>;
+
+	constructor(username: string, email: string, password: string) {
+		this.username = username;
+		this.email = email;
+		this.password = password;
+		this.errors = [];
+	}
+
+	valid(): boolean {
+		this.errors = [];
+		
+		if (this.username === '') {
+			this.errors.push('Invalid username');
+		}
+
+		if (this.email == '') {
+			this.errors.push('Invalid e-mail address');
+		}
+
+		if (this.password == '') {
+			this.errors.push('Invalid password');
+		}
+
+		return this.errors.length === 0;
+	}
+}

@@ -8,11 +8,11 @@
               <v-card-text>
                 <v-form @submit.prevent='handleSubmit' id='login-form' ref='form' lazy-validation>
                   <v-text-field 
-                    label='Login' 
-                    name='login' 
+                    label='Username' 
+                    name='username' 
                     prepend-icon='person' 
                     type='text' 
-                    v-model='email'
+                    v-model='username'
                   />
 
                   <v-text-field
@@ -22,6 +22,23 @@
                     prepend-icon='lock'
                     type='password'
                     v-model='password'
+                  />
+
+                  <v-text-field
+                    id='confirmPassword'
+                    label='Confirm Password'
+                    name='confirmPassword'
+                    prepend-icon='lock'
+                    type='password'
+                    v-model='confirmPassword'
+                  />
+
+                  <v-text-field 
+                    label='Email Address' 
+                    name='email' 
+                    prepend-icon='email' 
+                    type='text' 
+                    v-model='email'
                   />
                 </v-form>
               </v-card-text>
@@ -43,29 +60,35 @@
 </template>
 
 <script>
-import { Component, Vue } from 'vue-property-decorator';
-import CreateAccount from './CreateAccount.vue';
-import ResetPassword from './ResetPassword.vue';
 
-@Component({
-	components: {
-		CreateAccount,
-		ResetPassword,
-	}
-})
-export default class Login extends Vue {
-  data() {
-    return {
-      email: '',
-      password: ''
-    }
-  }
+import { AccountRequest } from '../store';
 
-  handleSubmit() {
-    console.log('handling submit');
-    console.log(this.email, this.password);
-  }
-}
+export default {
+  name: 'CreateAccount',
+  components: {},
+  data: () => ({
+    username: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+  }),
+  methods: {
+    handleSubmit () {
+      if (this.password !== this.confirmPassword) {
+        alert('Passwords do not match');
+        return;
+      }
+      
+      const acct = new AccountRequest(this.username, this.email, this.password)
+      if (!acct.valid()) {
+        console.log(acct.errors);
+        return;
+      }
+
+      this.$store.dispatch('createAccount', acct);
+    },
+  },
+};
 </script>
 
 <style scoped lang='scss'>

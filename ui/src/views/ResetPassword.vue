@@ -44,27 +44,9 @@
 
 <script>
 import { Component, Vue } from 'vue-property-decorator';
-import CreateAccount from './CreateAccount.vue';
-import ResetPassword from './ResetPassword.vue';
 
-@Component({
-	components: {
-		CreateAccount,
-		ResetPassword,
-	}
-})
-export default class Login extends Vue {
-  data() {
-    return {
-      email: '',
-      password: ''
-    }
-  }
-
-  handleSubmit() {
-    console.log('handling submit');
-    console.log(this.email, this.password);
-  }
+@Component({})
+export default class ResetPassword extends Vue {
 }
 </script>
 

@@ -3,6 +3,8 @@ import VueRouter from 'vue-router'
 import Home from '../views/Home.vue'
 import Login from '../views/Login.vue'
 import Account from '../views/Account.vue'
+import CreateAccount from '../views/CreateAccount.vue'
+import ResetPassword from '../views/ResetPassword.vue'
 import store from '../store';
 
 Vue.use(VueRouter)
@@ -22,6 +24,16 @@ const routes = [
 		path: '/account',
 		name: 'Account',
 		component: Account
+	},
+	{
+		path: '/account/create',
+		name: 'Create Account',
+		component: CreateAccount
+	},
+	{
+		path: '/account/reset-password',
+		name: 'Reset Password',
+		component: ResetPassword
 	},
 	{
 		path: '/search',
