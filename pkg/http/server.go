@@ -84,6 +84,13 @@ func Serve(log *zap.Logger) error {
 	grpcListener := m.Match(cmux.HTTP2HeaderField("content-type", "application/grpc"))
 	httpListener := m.Match(cmux.HTTP1Fast())
 
+	mx, ok := server.http.Handler.(*mux.Router)
+	if !ok {
+		return fmt.Errorf("router was not expected type: %T", server.http.Handler)
+	}
+
+	mx.PathPrefix("").Handler(http.FileServer(http.Dir("./ui/dist")))
+
 	g := new(errgroup.Group)
 	g.Go(func() error { return server.rpc.Serve(grpcListener) })
 	g.Go(func() error { return server.http.Serve(httpListener) })
