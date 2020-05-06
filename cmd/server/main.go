@@ -1,13 +1,28 @@
 package main
 
 import (
-	"log"
+	"fmt"
+	"os"
 
-	"github.com/ninnemana/vinyl/pkg/tcp"
+	httpserver "github.com/ninnemana/vinyl/pkg/http"
+	"github.com/ninnemana/vinyl/pkg/log"
+	"github.com/ninnemana/vinyl/pkg/router"
 )
 
 func main() {
-	if err := tcp.Serve(); err != nil {
-		log.Fatalf("failed to run vinyl service: %v", err)
+	zlg, err := log.Init()
+	if err != nil {
+		fmt.Printf("failed to create logger: %v", err)
+		os.Exit(1)
+	}
+
+	if err := router.Initialize(zlg); err != nil {
+		fmt.Printf("failed to run vinyl service: %v", err)
+		os.Exit(1)
+	}
+
+	if err := httpserver.Serve(zlg); err != nil {
+		fmt.Printf("failed to run vinyl service: %v", err)
+		os.Exit(1)
 	}
 }

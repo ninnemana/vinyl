@@ -84,13 +84,6 @@ generate:
     - name: swagger
       type: go
       output: openapi
-    - name: grpc-gateway
-      type: go
-      output:
-        pkg/vinyl
-        # The plugin name. This will go to protoc with --name_out, so it either needs
-        # to be a built-in name (like java), or a plugin name with a binary
-        # protoc-gen-name.
     - name: go
 
       # The type, if any. Valid types are go, gogo.

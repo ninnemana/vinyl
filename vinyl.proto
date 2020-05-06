@@ -169,6 +169,10 @@ message ReleaseResponse {
 	Pagination pagination = 2;
 }
 
+message SearchResponse {
+	repeated ReleaseResponse results = 1;
+}
+
 // Result describes a part of search result
 message Result {
 	option (gogoproto.goproto_getters) = false;
@@ -297,6 +301,9 @@ message Release {
 	int64 year = 33;
 }
 
+message ListResponse {
+	repeated Release results = 1;
+}
 
 message ListParams {
 	string artist = 1;
@@ -455,7 +462,7 @@ service Vinyl {
 			summary: "Health Check";
 		};
 	}
-    rpc List(ListParams) returns (stream Release) {
+    rpc List(ListParams) returns (ListResponse) {
 		option (google.api.http) = {
             get: "/vinyls";
         };
@@ -473,9 +480,9 @@ service Vinyl {
 			summary: "Get a Registed Vinyl";
 		};
 	}
-    rpc Search(SearchParams) returns (stream ReleaseResponse) {
+    rpc Search(SearchParams) returns (SearchResponse) {
 		option (google.api.http) = {
-			post: "/search";
+			post: "/vinyls/search";
 			body: "*";
         };
         option (grpc.gateway.protoc_gen_swagger.options.openapiv2_operation) = {

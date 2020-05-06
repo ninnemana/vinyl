@@ -43,6 +43,9 @@ gen_cert:
 run: generate
 	@go run ./cmd/server
 
+build-ui:
+	@cd ui; npm run-script build; cd ../
+
 gen_docs: generate
 	@npm install -g redoc-cli
 	@redoc-cli bundle \

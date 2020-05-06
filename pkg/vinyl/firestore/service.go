@@ -3,13 +3,19 @@ package firestore
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
+	"github.com/gorilla/mux"
+	"github.com/ninnemana/drudge"
 	"github.com/ninnemana/vinyl/pkg/log"
 	"github.com/ninnemana/vinyl/pkg/vinyl"
+	"go.opencensus.io/plugin/ocgrpc"
 	"golang.org/x/sync/errgroup"
+	"k8s.io/apimachinery/pkg/util/json"
 
 	"cloud.google.com/go/firestore"
 	discogs "github.com/irlndts/go-discogs"
@@ -34,26 +40,10 @@ type Service struct {
 	discogs     *discogs.Discogs
 	environment string
 	log         *zap.Logger
+	rpcClient   vinyl.VinylClient
 }
 
-func Register(server *grpc.Server) error {
-
-	zlg, err := log.Init()
-	if err != nil {
-		return errors.Wrap(err, "failed to create logger")
-	}
-
-	svc, err := New(context.Background(), zlg, os.Getenv("GCP_PROJECT_ID"))
-	if err != nil {
-		return errors.Wrap(err, "failed to create micropost service")
-	}
-
-	vinyl.RegisterVinylServer(server, svc)
-
-	return nil
-}
-
-func New(ctx context.Context, log *zap.Logger, projectID string) (*Service, error) {
+func New(ctx context.Context, log *zap.Logger, projectID string, cc *grpc.ClientConn) (*Service, error) {
 	if log == nil {
 		return nil, ErrInvalidLogger
 	}
@@ -72,14 +62,47 @@ func New(ctx context.Context, log *zap.Logger, projectID string) (*Service, erro
 	}
 
 	return &Service{
-		discogs: disc,
-		client:  client,
-		log:     log,
+		discogs:   disc,
+		client:    client,
+		log:       log,
+		rpcClient: vinyl.NewVinylClient(cc),
 	}, nil
 }
 
+func Register(server *grpc.Server) error {
+	zlg, err := log.Init()
+	if err != nil {
+		return errors.Wrap(err, "failed to create logger")
+	}
+
+	zlg.Debug(
+		"grpc server info",
+		zap.Any("info", server.GetServiceInfo()),
+	)
+
+	conn, err := grpc.Dial("")
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	svc, err := New(
+		context.Background(),
+		zlg,
+		os.Getenv("GCP_PROJECT_ID"),
+		conn,
+	)
+	if err != nil {
+		return errors.Wrap(err, "failed to create micropost service")
+	}
+
+	vinyl.RegisterVinylServer(server, svc)
+
+	return nil
+}
+
 // List retrieves all the entries that are associated with the user.
-func (s *Service) List(p *vinyl.ListParams, srv vinyl.Vinyl_ListServer) error {
+func (s *Service) List(ctx context.Context, p *vinyl.ListParams) (*vinyl.ListResponse, error) {
 	q := s.client.Collection(Entity).OrderBy("year", firestore.Desc)
 
 	if p.Artist != "" {
@@ -94,6 +117,7 @@ func (s *Service) List(p *vinyl.ListParams, srv vinyl.Vinyl_ListServer) error {
 		q = q.Where("title", "==", p.GetTitle())
 	}
 
+	results := []*vinyl.Release{}
 	getter := func(iter *firestore.DocumentIterator) error {
 		doc, err := iter.Next()
 		switch err {
@@ -103,9 +127,7 @@ func (s *Service) List(p *vinyl.ListParams, srv vinyl.Vinyl_ListServer) error {
 				return errors.Wrap(err, "document was not valid type")
 			}
 
-			if err := srv.Send(&res); err != nil {
-				return errors.Wrap(err, "failed to send record of server")
-			}
+			results = append(results, &res)
 
 			return nil
 		case iterator.Done:
@@ -115,7 +137,7 @@ func (s *Service) List(p *vinyl.ListParams, srv vinyl.Vinyl_ListServer) error {
 		}
 	}
 
-	it := q.Documents(srv.Context())
+	it := q.Documents(ctx)
 
 	for {
 		err := getter(it)
@@ -124,11 +146,13 @@ func (s *Service) List(p *vinyl.ListParams, srv vinyl.Vinyl_ListServer) error {
 		}
 
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
-	return nil
+	return &vinyl.ListResponse{
+		Results: results,
+	}, nil
 }
 
 func (s *Service) Get(ctx context.Context, p *vinyl.GetParams) (*vinyl.Release, error) {
@@ -192,7 +216,56 @@ func (s *Service) Get(ctx context.Context, p *vinyl.GetParams) (*vinyl.Release, 
 	return nil, vinyl.ErrNotFound
 }
 
-func (s *Service) Search(p *vinyl.SearchParams, srv vinyl.Vinyl_SearchServer) error {
+func (s *Service) Register(rpc *grpc.Server) error {
+	s.log.Debug(
+		"register RPC service",
+		zap.Any("info", rpc.GetServiceInfo()),
+	)
+
+	go func() {
+		ctx := context.Background()
+		for i := 0; i < 5; i++ {
+			conn, err := grpc.DialContext(
+				ctx,
+				"localhost:8080",
+				// grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{
+				// 	Certificates:       certs,
+				// 	InsecureSkipVerify: true,
+				// })),
+				grpc.WithInsecure(),
+				grpc.WithStatsHandler(&ocgrpc.ClientHandler{}),
+				grpc.WithUnaryInterceptor(drudge.UnaryClientInterceptor("vinyl")),
+				grpc.WithStreamInterceptor(drudge.StreamClientInterceptor("vinyl")),
+			)
+			if err != nil {
+				s.log.Error("client can't dial", zap.Error(err))
+				time.Sleep(time.Second * 1)
+				continue
+			}
+			defer conn.Close()
+
+			s.rpcClient = vinyl.NewVinylClient(conn)
+			if _, err := s.rpcClient.Health(ctx, &vinyl.HealthRequest{}); err != nil {
+				s.log.Error("health check is not responding", zap.Error(err))
+				time.Sleep(time.Second * 1)
+				continue
+			}
+
+			s.log.Debug("client connection established")
+			break
+		}
+	}()
+
+	vinyl.RegisterVinylServer(rpc, s)
+
+	return nil
+}
+
+func (s *Service) Route() string {
+	return "/vinyls"
+}
+
+func (s *Service) Search(ctx context.Context, p *vinyl.SearchParams) (*vinyl.SearchResponse, error) {
 	s.log.Debug(
 		"Searching for matching records against Discogs",
 		zap.Any("params", p),
@@ -213,13 +286,14 @@ func (s *Service) Search(p *vinyl.SearchParams, srv vinyl.Vinyl_SearchServer) er
 		Contributor:  p.GetContributor(),
 	})
 	if err != nil {
-		return errors.Wrap(err, "failed to execute search operation")
+		return nil, errors.Wrap(err, "failed to execute search operation")
 	}
 
+	results := []*vinyl.ReleaseResponse{}
 	for _, res := range search.Results {
 		year, _ := strconv.ParseInt(res.Year, 0, 64)
 
-		if err := srv.Send(&vinyl.ReleaseResponse{
+		results = append(results, &vinyl.ReleaseResponse{
 			Release: &vinyl.ReleaseSource{
 				Catno:       res.Catno,
 				Format:      strings.Join(res.Format, ","),
@@ -235,12 +309,78 @@ func (s *Service) Search(p *vinyl.SearchParams, srv vinyl.Vinyl_SearchServer) er
 				Page:    int64(search.Pagination.Page),
 				Items:   int64(search.Pagination.Items),
 			},
-		}); err != nil {
-			return err
-		}
+		})
 	}
 
-	return nil
+	return &vinyl.SearchResponse{
+		Results: results,
+	}, nil
+}
+
+func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	route := mux.CurrentRoute(r)
+	if route == nil {
+		s.log.Error("no route found", zap.String("path", r.URL.Path))
+		return
+	}
+
+	sub := route.Subrouter()
+	sub.HandleFunc("/search", func(w http.ResponseWriter, r *http.Request) {
+		result, err := s.Search(r.Context(), &vinyl.SearchParams{
+			Query:  r.URL.Query().Get("query"),
+			Type:   r.URL.Query().Get("type"),
+			Title:  r.URL.Query().Get("title"),
+			Artist: r.URL.Query().Get("artist"),
+		})
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+		w.Header().Add("Content-Type", "application/json")
+		if err := json.NewEncoder(w).Encode(result); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	})
+	sub.HandleFunc("/{id}", func(w http.ResponseWriter, r *http.Request) {
+		release, err := s.Get(r.Context(), &vinyl.GetParams{
+			Id: mux.Vars(r)["id"],
+		})
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		if err := json.NewEncoder(w).Encode(release); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+		w.Header().Add("Content-Type", "application/json")
+	})
+	sub.HandleFunc("", func(w http.ResponseWriter, r *http.Request) {
+		result, err := s.List(r.Context(), &vinyl.ListParams{
+			Artist: r.URL.Query().Get("artist"),
+			Type:   r.URL.Query().Get("type"),
+			Title:  r.URL.Query().Get("title"),
+		})
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+		w.Header().Add("Content-Type", "application/json")
+		if err := json.NewEncoder(w).Encode(result); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	})
+
+	sub.ServeHTTP(w, r)
 }
 
 func (s *Service) Store(ctx context.Context, p *vinyl.Release) (*vinyl.Release, error) {
