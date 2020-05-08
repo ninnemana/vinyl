@@ -31,6 +31,16 @@
               </v-card-actions>
             </v-card>
           </v-row>
+          <v-row align='center' justify='center' class='social'>
+            <v-card class='elevation-12'>
+              <a href="/auth/github">
+                <button class="btn-auth btn-github">
+                  <span>Sign in with <b>GitHub</b></span>
+                  <v-icon>fab fa-github</v-icon>
+                </button>
+              </a>
+            </v-card>
+          </v-row>
           <v-row align='center' justify='center' class='create-account'>
             <router-link to='/account/create'>Create Account</router-link>
             <span>|</span>
@@ -62,8 +72,7 @@ export default class Login extends Vue {
   }
 
   handleSubmit() {
-    console.log('handling submit');
-    console.log(this.email, this.password);
+    this.email = '';
   }
 }
 </script>
@@ -78,6 +87,38 @@ export default class Login extends Vue {
 
     .primary.v-btn:not(.v-btn--flat):not(.v-btn--text):not(.v-btn--outlined) {
       background-color: #4db6ac;
+    }
+  }
+
+  .social {
+    margin-top: 10px;
+    & > div {
+      padding: 10px;
+      & > a {
+        text-decoration: none;
+        color: #2c3e50;
+
+        & > button {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border: 2px #eaeaea solid;
+          border-radius: 4px;
+          padding: 5px 10px;
+          transition: 500ms all;
+          
+          & > span{
+            padding: 0 5px 0 0;
+          }
+          
+          & > i {
+            padding: 0 0 5px 0;
+          }
+        }
+        & > button:hover{
+          box-shadow: 1px 0px 3px #000000;
+        }
+      }
     }
   }
 
