@@ -1,0 +1,70 @@
+syntax = "proto3";
+package auth;
+
+import "gogoproto/gogo.proto";
+import "google/api/annotations.proto";
+// import "google/protobuf/empty.proto";
+import "protoc-gen-swagger/options/annotations.proto";
+import "github.com/ninnemana/vinyl/pkg/users/users.proto";
+
+option (gogoproto.protosizer_all) = true;
+option (gogoproto.sizer_all) = false;
+option go_package = "auth";
+
+message HealthRequest {
+	string uptime = 1;
+	string machine = 2;
+}
+
+message HealthResponse {
+	string uptime = 1;
+	string machine = 2;
+}
+
+message AuthRequest {
+	string email = 1;
+	string password = 2;
+}
+
+message AuthResponse {
+	string token = 1;
+	users.User user = 2;
+}
+
+option (grpc.gateway.protoc_gen_swagger.options.openapiv2_swagger) = {
+	info: {
+		title: "Auth API";
+        version: "0.0.1";
+        description: "This API will give access to vinyl data";
+		contact: {
+			url: "https://ninneman.org";
+			email: "alex@ninneman.com";
+		};
+	};
+	host: "api.alexninneman.com";
+    schemes: HTTP;
+    schemes: HTTPS;
+    consumes: "application/json";
+    produces: "application/json";
+};
+
+service Authentication {
+	rpc Health(HealthRequest) returns (HealthResponse) {
+		option (google.api.http) = {
+			get: "/auth/health";
+		};
+		option (grpc.gateway.protoc_gen_swagger.options.openapiv2_operation) = {
+			description: "Returns the current state of the service";
+			summary: "Health Check";
+		};
+	}
+	rpc Authenticate(AuthRequest) returns (AuthResponse) {
+		option (google.api.http) = {
+			post: "/auth";
+		};
+		option (grpc.gateway.protoc_gen_swagger.options.openapiv2_operation) = {
+			description: "Logs a user into the system";
+			summary: "Authenticate";
+		};
+	}
+}

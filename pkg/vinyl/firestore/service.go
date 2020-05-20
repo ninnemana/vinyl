@@ -10,10 +10,8 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	"github.com/ninnemana/drudge"
-	"github.com/ninnemana/vinyl/pkg/log"
+	"github.com/ninnemana/vinyl/pkg/auth"
 	"github.com/ninnemana/vinyl/pkg/vinyl"
-	"go.opencensus.io/plugin/ocgrpc"
 	"golang.org/x/sync/errgroup"
 	"k8s.io/apimachinery/pkg/util/json"
 
@@ -28,7 +26,7 @@ import (
 )
 
 const (
-	Entity = "vinyl"
+	Entity = "vinyls"
 )
 
 var (
@@ -36,11 +34,12 @@ var (
 )
 
 type Service struct {
-	client      *firestore.Client
-	discogs     *discogs.Discogs
-	environment string
-	log         *zap.Logger
-	rpcClient   vinyl.VinylClient
+	client  *firestore.Client
+	discogs *discogs.Discogs
+	log     *zap.Logger
+	// rpcClient     vinyl.VinylClient
+	initTimestamp time.Time
+	hostname      string
 }
 
 func New(ctx context.Context, log *zap.Logger, projectID string, cc *grpc.ClientConn) (*Service, error) {
@@ -61,44 +60,19 @@ func New(ctx context.Context, log *zap.Logger, projectID string, cc *grpc.Client
 		return nil, errors.Wrap(err, "failed to create firestore client")
 	}
 
+	hostname, err := os.Hostname()
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch hostname: %w", err)
+	}
+
 	return &Service{
-		discogs:   disc,
-		client:    client,
-		log:       log,
-		rpcClient: vinyl.NewVinylClient(cc),
+		discogs: disc,
+		client:  client,
+		log:     log,
+		// rpcClient:     vinyl.NewVinylClient(cc),
+		hostname:      hostname,
+		initTimestamp: time.Now().UTC(),
 	}, nil
-}
-
-func Register(server *grpc.Server) error {
-	zlg, err := log.Init()
-	if err != nil {
-		return errors.Wrap(err, "failed to create logger")
-	}
-
-	zlg.Debug(
-		"grpc server info",
-		zap.Any("info", server.GetServiceInfo()),
-	)
-
-	conn, err := grpc.Dial("")
-	if err != nil {
-		return err
-	}
-	defer conn.Close()
-
-	svc, err := New(
-		context.Background(),
-		zlg,
-		os.Getenv("GCP_PROJECT_ID"),
-		conn,
-	)
-	if err != nil {
-		return errors.Wrap(err, "failed to create micropost service")
-	}
-
-	vinyl.RegisterVinylServer(server, svc)
-
-	return nil
 }
 
 // List retrieves all the entries that are associated with the user.
@@ -153,6 +127,12 @@ func (s *Service) List(ctx context.Context, p *vinyl.ListParams) (*vinyl.ListRes
 	return &vinyl.ListResponse{
 		Results: results,
 	}, nil
+}
+
+func (s *Service) Middleware() []mux.MiddlewareFunc {
+	return []mux.MiddlewareFunc{
+		auth.Authenticator,
+	}
 }
 
 func (s *Service) Get(ctx context.Context, p *vinyl.GetParams) (*vinyl.Release, error) {
@@ -222,39 +202,39 @@ func (s *Service) Register(rpc *grpc.Server) error {
 		zap.Any("info", rpc.GetServiceInfo()),
 	)
 
-	go func() {
-		ctx := context.Background()
-		for i := 0; i < 5; i++ {
-			conn, err := grpc.DialContext(
-				ctx,
-				"localhost:8080",
-				// grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{
-				// 	Certificates:       certs,
-				// 	InsecureSkipVerify: true,
-				// })),
-				grpc.WithInsecure(),
-				grpc.WithStatsHandler(&ocgrpc.ClientHandler{}),
-				grpc.WithUnaryInterceptor(drudge.UnaryClientInterceptor("vinyl")),
-				grpc.WithStreamInterceptor(drudge.StreamClientInterceptor("vinyl")),
-			)
-			if err != nil {
-				s.log.Error("client can't dial", zap.Error(err))
-				time.Sleep(time.Second * 1)
-				continue
-			}
-			defer conn.Close()
+	// go func() {
+	// 	ctx := context.Background()
+	// 	for i := 0; i < 5; i++ {
+	// 		conn, err := grpc.DialContext(
+	// 			ctx,
+	// 			"localhost:8080",
+	// 			// grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{
+	// 			// 	Certificates:       certs,
+	// 			// 	InsecureSkipVerify: true,
+	// 			// })),
+	// 			grpc.WithInsecure(),
+	// 			grpc.WithStatsHandler(&ocgrpc.ClientHandler{}),
+	// 			grpc.WithUnaryInterceptor(drudge.UnaryClientInterceptor("vinyl")),
+	// 			grpc.WithStreamInterceptor(drudge.StreamClientInterceptor("vinyl")),
+	// 		)
+	// 		if err != nil {
+	// 			s.log.Error("client can't dial", zap.Error(err))
+	// 			time.Sleep(time.Second * 1)
+	// 			continue
+	// 		}
+	// 		defer conn.Close()
 
-			s.rpcClient = vinyl.NewVinylClient(conn)
-			if _, err := s.rpcClient.Health(ctx, &vinyl.HealthRequest{}); err != nil {
-				s.log.Error("health check is not responding", zap.Error(err))
-				time.Sleep(time.Second * 1)
-				continue
-			}
+	// 		s.rpcClient = vinyl.NewVinylClient(conn)
+	// 		if _, err := s.rpcClient.Health(ctx, &vinyl.HealthRequest{}); err != nil {
+	// 			s.log.Error("health check is not responding", zap.Error(err))
+	// 			time.Sleep(time.Second * 1)
+	// 			continue
+	// 		}
 
-			s.log.Debug("client connection established")
-			break
-		}
-	}()
+	// 		s.log.Debug("client connection established")
+	// 		break
+	// 	}
+	// }()
 
 	vinyl.RegisterVinylServer(rpc, s)
 
@@ -262,7 +242,7 @@ func (s *Service) Register(rpc *grpc.Server) error {
 }
 
 func (s *Service) Route() string {
-	return "/vinyls"
+	return "/" + Entity
 }
 
 func (s *Service) Search(ctx context.Context, p *vinyl.SearchParams) (*vinyl.SearchResponse, error) {
@@ -337,9 +317,21 @@ func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		w.WriteHeader(http.StatusOK)
 		w.Header().Add("Content-Type", "application/json")
 		if err := json.NewEncoder(w).Encode(result); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	})
+	sub.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		resp, err := s.Health(r.Context(), nil)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Add("Content-Type", "application/json")
+		if err := json.NewEncoder(w).Encode(resp); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -395,7 +387,10 @@ func (s *Service) Store(ctx context.Context, p *vinyl.Release) (*vinyl.Release, 
 }
 
 func (s *Service) Health(_ context.Context, _ *vinyl.HealthRequest) (*vinyl.HealthResponse, error) {
-	return &vinyl.HealthResponse{}, nil
+	return &vinyl.HealthResponse{
+		Uptime:  time.Since(s.initTimestamp).String(),
+		Machine: s.hostname,
+	}, nil
 }
 
 func (s *Service) getStored(ctx context.Context, p *vinyl.GetParams) (*vinyl.Release, error) {
@@ -576,4 +571,10 @@ func toArtist(artist discogs.ArtistSource) *vinyl.ArtistSource {
 		Role:        artist.Role,
 		Tracks:      artist.Tracks,
 	}
+}
+
+func testMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		next.ServeHTTP(w, r)
+	})
 }

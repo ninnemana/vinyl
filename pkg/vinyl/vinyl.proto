@@ -455,7 +455,7 @@ option (grpc.gateway.protoc_gen_swagger.options.openapiv2_swagger) = {
 service Vinyl {
 	rpc Health(HealthRequest) returns (HealthResponse) {
 		option (google.api.http) = {
-			get: "/v0/health";
+			get: "/vinyls/health";
 		};
 		option (grpc.gateway.protoc_gen_swagger.options.openapiv2_operation) = {
 			description: "Returns the current state of the service";

@@ -16,12 +16,18 @@ func main() {
 		os.Exit(1)
 	}
 
+	server, err := httpserver.New(zlg)
+	if err != nil {
+		fmt.Printf("failed to run vinyl service: %v", err)
+		os.Exit(1)
+	}
+
 	if err := router.Initialize(zlg); err != nil {
 		fmt.Printf("failed to run vinyl service: %v", err)
 		os.Exit(1)
 	}
 
-	if err := httpserver.Serve(zlg); err != nil {
+	if err := server.Serve(); err != nil {
 		fmt.Printf("failed to run vinyl service: %v", err)
 		os.Exit(1)
 	}
