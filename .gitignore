@@ -30,6 +30,4 @@ static
 pkg/vinyl/*pb.go
 pkg/vinyl/*pb.gw.go
 sdks/
-client
-server
 .env
