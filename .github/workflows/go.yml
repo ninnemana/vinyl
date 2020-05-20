@@ -5,7 +5,7 @@ on:
       - master
 jobs:
   build-api:
-    name: Build
+    name: Build API
     runs-on: ubuntu-latest
     steps:
 
