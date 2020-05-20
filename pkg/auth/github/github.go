@@ -166,7 +166,7 @@ func (s *Service) AuthorizeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Println(cookie.Value, cookie.Expires.String())
+	_ = cookie.Value
 }
 
 func (s *Service) AuthHandler(w http.ResponseWriter, r *http.Request) {
@@ -304,17 +304,7 @@ func (s *Service) CallbackHandler(w http.ResponseWriter, r *http.Request) {
 
 	s.log.Debug("writing token to response body")
 
-	// http.Redirect(w, r, "/account", http.StatusTemporaryRedirect)
 	w.WriteHeader(http.StatusFound)
-	// w.Header().Set("Content-Type", "application/json")
-	// if err := json.NewEncoder(w).Encode(AuthResponse{
-	// 	AccessToken: token,
-	// 	User:        authUser,
-	// }); err != nil {
-	// 	s.log.Error("failed to encode auth response", zap.Error(err))
-	// 	http.Error(w, err.Error(), http.StatusInternalServerError)
-	// 	return
-	// }
 }
 
 func (s *Service) HealthHandler(w http.ResponseWriter, r *http.Request) {
