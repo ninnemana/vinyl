@@ -1,8 +1,7 @@
 name: Go
 on: [push]
 jobs:
-
-  build:
+  build-api:
     name: Build
     runs-on: ubuntu-latest
     steps:

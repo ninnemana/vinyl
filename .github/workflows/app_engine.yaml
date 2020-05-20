@@ -1,13 +1,13 @@
 name: Deploy to Google App Engine
 
-# on:
-#   push:
+on: [push]
 #     branches:
 #       - master
 
 jobs:
   setup-build-deploy:
     name: Deploy
+    needs: [build-api, build-ui]
     runs-on: ubuntu-latest
 
     steps:
