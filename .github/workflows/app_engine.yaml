@@ -117,5 +117,10 @@ jobs:
       # Deploy App to App Engine
       - name: Deploy
         run: |
+          export GOPATH=$HOME/go
+          export GOBIN=$(go env GOPATH)/bin
+          export PATH=$PATH:$GOPATH
+          export PATH=$PATH:$GOBIN
+          cd $GOPATH/src/github.com/$GITHUB_REPOSITORY
           make generate
           gcloud app deploy --promote --stop-previous-version --quiet
