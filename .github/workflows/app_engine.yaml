@@ -130,5 +130,6 @@ jobs:
           cd ui/
           npm i
           npm run-script build
+          rm -rf node_modules public src
           cd ../
           gcloud app deploy --promote --stop-previous-version --quiet
