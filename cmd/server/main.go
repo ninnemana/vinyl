@@ -10,6 +10,7 @@ import (
 )
 
 func main() {
+	fmt.Printf("%+v\n", os.Environ())
 	zlg, err := log.Init()
 	if err != nil {
 		fmt.Printf("failed to create logger: %v\n", err)
