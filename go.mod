@@ -3,7 +3,7 @@ module github.com/ninnemana/vinyl
 go 1.13
 
 require (
-	cloud.google.com/go v0.52.0 // indirect
+	cloud.google.com/go v0.52.0
 	cloud.google.com/go/firestore v1.1.1
 	contrib.go.opencensus.io/exporter/jaeger v0.2.0 // indirect
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible

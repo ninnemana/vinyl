@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
 	"strconv"
 	"time"
 
@@ -28,9 +27,6 @@ const (
 
 var (
 	ErrInvalidLogger = errors.New("the provided logger was not valid")
-	redirectURL      = os.Getenv("BASE_URL") + "/auth/redirect"
-	client_id        = os.Getenv("GITHUB_CLIENT_ID")
-	client_secret    = os.Getenv("GITHUB_CLIENT_SECRET")
 	httpClient       = &http.Client{
 		Timeout: time.Second * 5,
 	}
@@ -43,6 +39,10 @@ type Service struct {
 	http          *http.Client
 	github        *github.Client
 	users         users.UsersServer
+	tokenizer     auth.Tokenizer
+	redirectURL   string
+	clientID      string
+	clientSecret  string
 }
 
 type AuthResponse struct {
@@ -50,23 +50,32 @@ type AuthResponse struct {
 	User        *users.User `json:"user,omitempty"`
 }
 
-func New(ctx context.Context, log *zap.Logger, u users.UsersServer) (*Service, error) {
-	if log == nil {
+type Config struct {
+	Logger       *zap.Logger
+	UserService  users.UsersServer
+	Tokenizer    auth.Tokenizer
+	Hostname     string
+	RedirectURL  string
+	ClientID     string
+	ClientSecret string
+}
+
+func New(ctx context.Context, cfg Config) (*Service, error) {
+	if cfg.Logger == nil {
 		return nil, ErrInvalidLogger
 	}
 
-	hostname, err := os.Hostname()
-	if err != nil {
-		return nil, fmt.Errorf("faild to lookup hostname: %w", err)
-	}
-
 	return &Service{
-		log:           log,
-		hostname:      hostname,
+		log:           cfg.Logger,
+		hostname:      cfg.Hostname,
 		initTimestamp: time.Now().UTC(),
 		http:          httpClient,
 		github:        github.NewClient(httpClient),
-		users:         u,
+		users:         cfg.UserService,
+		tokenizer:     cfg.Tokenizer,
+		redirectURL:   cfg.RedirectURL,
+		clientID:      cfg.ClientID,
+		clientSecret:  cfg.ClientSecret,
 	}, nil
 }
 
@@ -99,7 +108,7 @@ func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	sub := route.Subrouter()
 	sub.HandleFunc("/github", s.AuthHandler)
 	sub.HandleFunc("/authorize", s.AuthorizeHandler)
-	sub.HandleFunc("/health", auth.Authenticator(http.HandlerFunc(s.HealthHandler)).ServeHTTP)
+	sub.HandleFunc("/health", s.tokenizer.Authenticator(http.HandlerFunc(s.HealthHandler)).ServeHTTP)
 	sub.HandleFunc("/redirect", s.CallbackHandler)
 	sub.HandleFunc("", s.AuthenticateHandler)
 
@@ -147,7 +156,7 @@ func (s *Service) Authenticate(ctx context.Context, r *auth.AuthRequest) (*auth.
 	}
 	u.Password = ""
 
-	token, err := auth.GenerateToken(u)
+	token, err := s.tokenizer.GenerateToken(ctx, u)
 	if err != nil {
 		return nil, err
 	}
@@ -175,7 +184,7 @@ func (s *Service) AuthHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(
 		w,
 		r,
-		fmt.Sprintf("https://github.com/login/oauth/authorize?client_id=%s&redirect_uri=%s", client_id, redirectURL),
+		fmt.Sprintf("https://github.com/login/oauth/authorize?client_id=%s&redirect_uri=%s", s.clientID, s.redirectURL),
 		http.StatusTemporaryRedirect,
 	)
 }
@@ -198,8 +207,8 @@ func (s *Service) CallbackHandler(w http.ResponseWriter, r *http.Request) {
 		http.MethodPost,
 		fmt.Sprintf(
 			"https://github.com/login/oauth/access_token?client_id=%s&client_secret=%s&code=%s",
-			client_id,
-			client_secret,
+			s.clientID,
+			s.clientSecret,
 			code,
 		),
 		nil,
@@ -283,7 +292,7 @@ func (s *Service) CallbackHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := auth.GenerateToken(authUser)
+	token, err := s.tokenizer.GenerateToken(r.Context(), authUser)
 	if err != nil {
 		s.log.Error("failed to generate auth token", zap.Error(err))
 		http.Error(w, err.Error(), http.StatusUnprocessableEntity)

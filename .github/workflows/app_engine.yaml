@@ -132,4 +132,5 @@ jobs:
           npm run-script build
           rm -rf node_modules public src
           cd ../
+          envsubst < app.yaml > app.yaml
           gcloud app deploy --promote --stop-previous-version --quiet

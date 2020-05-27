@@ -12,23 +12,23 @@ import (
 func main() {
 	zlg, err := log.Init()
 	if err != nil {
-		fmt.Printf("failed to create logger: %v", err)
+		fmt.Printf("failed to create logger: %v\n", err)
 		os.Exit(1)
 	}
 
 	server, err := httpserver.New(zlg)
 	if err != nil {
-		fmt.Printf("failed to run vinyl service: %v", err)
+		fmt.Printf("failed to run vinyl service: %v\n", err)
 		os.Exit(1)
 	}
 
 	if err := router.Initialize(zlg); err != nil {
-		fmt.Printf("failed to run vinyl service: %v", err)
+		fmt.Printf("failed to run vinyl service: %v\n", err)
 		os.Exit(1)
 	}
 
 	if err := server.Serve(); err != nil {
-		fmt.Printf("failed to run vinyl service: %v", err)
+		fmt.Printf("failed to run vinyl service: %v\n", err)
 		os.Exit(1)
 	}
 }

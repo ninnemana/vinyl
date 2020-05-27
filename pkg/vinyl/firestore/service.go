@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -34,43 +33,46 @@ var (
 )
 
 type Service struct {
-	client  *firestore.Client
-	discogs *discogs.Discogs
-	log     *zap.Logger
-	// rpcClient     vinyl.VinylClient
+	client        *firestore.Client
+	discogs       *discogs.Discogs
+	log           *zap.Logger
+	tokenizer     auth.Tokenizer
 	initTimestamp time.Time
 	hostname      string
 }
 
-func New(ctx context.Context, log *zap.Logger, projectID string, cc *grpc.ClientConn) (*Service, error) {
-	if log == nil {
+type Config struct {
+	Logger          *zap.Logger
+	GoogleProjectID string
+	DiscogsAPIKey   string
+	Hostname        string
+	Tokenizer       auth.Tokenizer
+}
+
+func New(ctx context.Context, cfg Config) (*Service, error) {
+	if cfg.Logger == nil {
 		return nil, ErrInvalidLogger
 	}
 
 	disc, err := discogs.New(&discogs.Options{
 		UserAgent: "Some Agent",
-		Token:     os.Getenv("DISCOGS_API_KEY"),
+		Token:     cfg.DiscogsAPIKey,
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create discogs client")
 	}
 
-	client, err := firestore.NewClient(ctx, projectID)
+	client, err := firestore.NewClient(ctx, cfg.GoogleProjectID)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create firestore client")
 	}
 
-	hostname, err := os.Hostname()
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch hostname: %w", err)
-	}
-
 	return &Service{
-		discogs: disc,
-		client:  client,
-		log:     log,
-		// rpcClient:     vinyl.NewVinylClient(cc),
-		hostname:      hostname,
+		discogs:       disc,
+		client:        client,
+		log:           cfg.Logger,
+		hostname:      cfg.Hostname,
+		tokenizer:     cfg.Tokenizer,
 		initTimestamp: time.Now().UTC(),
 	}, nil
 }
@@ -131,7 +133,7 @@ func (s *Service) List(ctx context.Context, p *vinyl.ListParams) (*vinyl.ListRes
 
 func (s *Service) Middleware() []mux.MiddlewareFunc {
 	return []mux.MiddlewareFunc{
-		auth.Authenticator,
+		s.tokenizer.Authenticator,
 	}
 }
 

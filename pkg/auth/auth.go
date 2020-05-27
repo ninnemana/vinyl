@@ -1,9 +1,9 @@
 package auth
 
 import (
+	"context"
 	"errors"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 
@@ -13,10 +13,6 @@ import (
 
 const (
 	CookieName = "vinyl-auth"
-)
-
-var (
-	accessSecret = os.Getenv("JWT_ACCESS_SECRET")
 )
 
 type User struct {
@@ -35,19 +31,39 @@ func (u UserClaims) Valid() error {
 	return nil
 }
 
-func GenerateToken(u *users.User) (string, error) {
+type Tokenizer interface {
+	GenerateToken(context.Context, *users.User) (string, error)
+	Authenticator(http.Handler) http.Handler
+}
+
+type JWT struct {
+	accessSecret string
+	replacer     *strings.Replacer
+	validator    func(*jwt.Token) (interface{}, error)
+}
+
+func NewTokenizer(accessSecret string) (Tokenizer, error) {
 	if accessSecret == "" {
-		return "", errors.New("no JWT access token was provided")
+		return nil, errors.New("no JWT access token was provided")
 	}
 
+	return &JWT{
+		accessSecret: accessSecret,
+		replacer:     strings.NewReplacer("Bearer ", "", "bearer", ""),
+		validator: func(token *jwt.Token) (interface{}, error) {
+			return []byte(accessSecret), nil
+		},
+	}, nil
+}
+
+func (t *JWT) GenerateToken(_ context.Context, u *users.User) (string, error) {
 	at := jwt.NewWithClaims(jwt.SigningMethodHS256, UserClaims{
 		Authorized: true,
 		UserID:     u.GetId(),
 		Expires:    time.Now().Add(time.Minute * 15).Unix(),
-		// Token:      u.Token,
 	})
 
-	token, err := at.SignedString([]byte(accessSecret))
+	token, err := at.SignedString([]byte(t.accessSecret))
 	if err != nil {
 		return "", err
 	}
@@ -55,8 +71,7 @@ func GenerateToken(u *users.User) (string, error) {
 	return token, nil
 }
 
-func Authenticator(next http.Handler) http.Handler {
-	replacer := strings.NewReplacer("Bearer ", "", "bearer", "")
+func (t *JWT) Authenticator(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		auth := r.Header.Get("Authorization")
 		if auth == "" {
@@ -64,9 +79,11 @@ func Authenticator(next http.Handler) http.Handler {
 			return
 		}
 
-		token, err := jwt.ParseWithClaims(replacer.Replace(auth), &UserClaims{}, func(token *jwt.Token) (interface{}, error) {
-			return []byte(accessSecret), nil
-		})
+		token, err := jwt.ParseWithClaims(
+			t.replacer.Replace(auth),
+			&UserClaims{},
+			t.validator,
+		)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusUnauthorized)
 			return
