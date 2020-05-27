@@ -127,4 +127,8 @@ jobs:
           mv $(pwd)/* $GOPATH/src/github.com/$GITHUB_REPOSITORY
           cd $GOPATH/src/github.com/$GITHUB_REPOSITORY
           make generate
+          cd ui/
+          npm i
+          npm run-script build
+          cd ../
           gcloud app deploy --promote --stop-previous-version --quiet
