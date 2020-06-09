@@ -1,6 +1,8 @@
 package vinyl
 
-import "github.com/pkg/errors"
+import (
+	"github.com/pkg/errors"
+)
 
 var (
 	ErrNotFound         = errors.Errorf("no vinyl was found")

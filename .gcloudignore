@@ -1,0 +1,5 @@
+.git
+node_modules
+ui/node_modules
+ui
+openapi/node_modules

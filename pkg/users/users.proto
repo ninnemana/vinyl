@@ -1,0 +1,90 @@
+syntax = "proto3";
+package users;
+
+import "gogoproto/gogo.proto";
+import "google/api/annotations.proto";
+import "google/protobuf/timestamp.proto";
+import "protoc-gen-swagger/options/annotations.proto";
+
+option (gogoproto.protosizer_all) = true;
+option (gogoproto.sizer_all) = false;
+option go_package = "users";
+
+message HealthRequest {
+	string uptime = 1;
+	string machine = 2;
+}
+
+message HealthResponse {
+	string uptime = 1;
+	string machine = 2;
+}
+
+message GetParams {
+	string id = 1;
+	string email = 2;
+	repeated AuthenticatedAccount authenticated_accounts = 3;
+}
+
+message User {
+	string id = 1;
+	string name = 2;
+	string email = 3;
+	string password = 4;
+	repeated AuthenticatedAccount authenticated_accounts = 5;
+	google.protobuf.Timestamp created = 6;
+	google.protobuf.Timestamp updated = 7;
+	google.protobuf.Timestamp deleted = 8;
+}
+
+message AuthenticatedAccount {
+	string id = 1;
+	string type = 2;
+}
+
+option (grpc.gateway.protoc_gen_swagger.options.openapiv2_swagger) = {
+	info: {
+		title: "Users API";
+        version: "0.0.1";
+        description: "This API will give access to user data";
+		contact: {
+			url: "https://ninneman.org";
+			email: "alex@ninneman.com";
+		};
+	};
+	host: "api.alexninneman.com";
+    schemes: HTTP;
+    schemes: HTTPS;
+    consumes: "application/json";
+    produces: "application/json";
+};
+
+service Users {
+	rpc Health(HealthRequest) returns (HealthResponse) {
+		option (google.api.http) = {
+			get: "/users/health";
+		};
+		option (grpc.gateway.protoc_gen_swagger.options.openapiv2_operation) = {
+			description: "Returns the current state of the service";
+			summary: "Health Check";
+		};
+	}
+	rpc Get(GetParams) returns (User) {
+		option (google.api.http) = {
+			get: "/users/{id}";
+		};
+		option (grpc.gateway.protoc_gen_swagger.options.openapiv2_operation) = {
+			description: "Retrieves a single user";
+			summary: "Get User";
+		};
+	}
+	rpc Save(User) returns (User) {
+		option (google.api.http) = {
+			post: "/users";
+		};
+		option (grpc.gateway.protoc_gen_swagger.options.openapiv2_operation) = {
+			description: "Save a single user";
+			summary: "Save User";
+		};
+	}
+}

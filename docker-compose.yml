@@ -1,0 +1,45 @@
+version: '3.7'
+services:
+  ui:
+    build:
+      context: ./ui
+      dockerfile: Dockerfile
+    ports:
+      - 8082:80
+    depends_on:
+      - api
+    environment:
+      - VUE_APP_API_DOMAIN=http://localhost:8080
+  api:
+    build:
+      context: .
+      dockerfile: cmd/server/Dockerfile
+    environment:
+      - GCP_PROJECT_ID
+      - DISCOGS_API_KEY
+      - GOOGLE_APPLICATION_CREDENTIALS
+      - JAEGER_AGENT_HOST=jaeger
+      - JAEGER_AGENT_PORT=6831
+    ports:
+      - 8080:8080
+      - 8081:8081
+    volumes:
+      - $HOME/tmp:/tmp
+      - ./localhost:/app/localhost
+    depends_on:
+      - jaeger
+      - prometheus
+  prometheus:
+    image: prom/prometheus:v2.15.2
+    ports:
+      - 9090:9090
+    volumes:
+      - ./docker/prometheus/:/etc/prometheus/
+      - prometheus_data:/prometheus
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    ports:
+      - "6831:6831/udp"
+      - "16686:16686"
+volumes:
+  prometheus_data:

@@ -1,38 +1,59 @@
 package main
 
 import (
-	"context"
 	"fmt"
-	"log"
-
-	"github.com/ninnemana/vinyl/pkg/vinyl"
-
-	"google.golang.org/grpc"
+	"os"
 )
 
+// import (
+// 	"context"
+// 	"fmt"
+// 	"io"
+// 	"log"
+// 	"os"
+
+// 	"github.com/ninnemana/vinyl/pkg/vinyl"
+
+// 	"google.golang.org/grpc"
+// )
+
 func main() {
-	conn, err := grpc.DialContext(context.Background(), ":8080", grpc.WithInsecure())
-	// conn, err := grpc.Dial(":8080")
-	if err != nil {
-		log.Fatalf("failed to dial service: %v", err)
-	}
-	defer conn.Close()
-
-	svc := vinyl.NewVinylClient(conn)
-	client, err := svc.Search(context.Background(), &vinyl.SearchParams{
-		Artist: "Kendrick Lamar",
-	})
-	if err != nil {
-		log.Fatalf("failed to create search scanner: %v", err)
+	if len(os.Args) < 2 {
+		usage()
+		return
 	}
 
-	for {
-		msg, err := client.Recv()
-		if err != nil {
-			log.Printf("failed to receive release: %v\n", err)
-			break
-		}
+	// 	conn, err := grpc.DialContext(context.Background(), ":8081", grpc.WithInsecure())
+	// 	// conn, err := grpc.Dial(":8080")
+	// 	if err != nil {
+	// 		log.Fatalf("failed to dial service: %v", err)
+	// 	}
+	// 	defer conn.Close()
 
-		fmt.Println(msg.GetYear(), msg.GetArtist(), msg.GetTitle(), msg.GetType())
-	}
+	// 	svc := vinyl.NewVinylClient(conn)
+	// 	client, err := svc.Search(context.Background(), &vinyl.SearchParams{
+	// 		Artist: os.Args[1],
+	// 	})
+	// 	if err != nil {
+	// 		log.Fatalf("failed to create search scanner: %v", err)
+	// 	}
+
+	// 	for {
+	// 		msg, err := client.Recv()
+	// 		if err == io.EOF {
+	// 			break
+	// 		}
+	// 		if err != nil {
+	// 			log.Printf("failed to receive release: %v\n", err)
+	// 			break
+	// 		}
+
+	// 		fmt.Printf("Message: %+v\n", msg)
+	// 	}
+}
+
+func usage() {
+	fmt.Printf("Vinyltap.io CLI\n----------\n\n")
+	fmt.Printf("\t Sub Commands\n")
+	fmt.Printf("\t\t search\n")
 }
