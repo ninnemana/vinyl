@@ -4,7 +4,7 @@
 			<ListView class='result' v-for='result in results' v-bind:key='result.id' :entry='result' />
 		</div>
 		<div v-else>No registered records. Maybe explore for something new?</div>
-		<Pagination :onChange='handlePage' :settings='paging()' />
+		<!-- <Pagination :onChange='handlePage' :settings='paging()' /> -->
 	</div>
 </template>
 
@@ -23,7 +23,7 @@ export default class Feed extends Vue {
 	@Prop() private results!: {};
 	@Prop() private pagination!: {};
 
-	private data() {
+	private computed() {
 		return {
 			paging: () => {
 				return this.pagination;

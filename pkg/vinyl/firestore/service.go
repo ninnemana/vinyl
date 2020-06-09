@@ -2,7 +2,7 @@ package firestore
 
 import (
 	"context"
-	"fmt"
+	"encoding/json"
 	"net/http"
 	"strconv"
 	"strings"
@@ -12,10 +12,9 @@ import (
 	"github.com/ninnemana/vinyl/pkg/auth"
 	"github.com/ninnemana/vinyl/pkg/vinyl"
 	"golang.org/x/sync/errgroup"
-	"k8s.io/apimachinery/pkg/util/json"
 
 	"cloud.google.com/go/firestore"
-	discogs "github.com/irlndts/go-discogs"
+	discogs "github.com/ninnemana/go-discogs"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 	"google.golang.org/api/iterator"
@@ -34,7 +33,7 @@ var (
 
 type Service struct {
 	client        *firestore.Client
-	discogs       *discogs.Discogs
+	discogs       discogs.Discogs
 	log           *zap.Logger
 	tokenizer     auth.Tokenizer
 	initTimestamp time.Time
@@ -137,14 +136,14 @@ func (s *Service) Middleware() []mux.MiddlewareFunc {
 	}
 }
 
-func (s *Service) Get(ctx context.Context, p *vinyl.GetParams) (*vinyl.Release, error) {
+func (s *Service) Get(ctx context.Context, p *vinyl.GetParams) (*vinyl.Master, error) {
 	if p.GetId() == "" {
 		return nil, vinyl.ErrInvalidGetParams
 	}
 
 	var (
-		stored *vinyl.Release
-		result *vinyl.Release
+		stored *vinyl.Master
+		result *vinyl.Master
 	)
 
 	g, _ := errgroup.WithContext(ctx)
@@ -168,12 +167,14 @@ func (s *Service) Get(ctx context.Context, p *vinyl.GetParams) (*vinyl.Release, 
 			return errors.New("failed to parse identifier `" + p.GetId() + "`")
 		}
 
-		res, err := s.discogs.Database.Release(id)
+		s.log.Debug("querying discogs for release", zap.Int("releaseID", id))
+
+		res, err := s.discogs.Master(id)
 		if err != nil {
 			return err
 		}
 
-		result = toRelease(res)
+		result = toMaster(res)
 
 		return nil
 	})
@@ -253,10 +254,10 @@ func (s *Service) Search(ctx context.Context, p *vinyl.SearchParams) (*vinyl.Sea
 		zap.Any("params", p),
 	)
 
-	search, err := s.discogs.Search.Search(discogs.SearchRequest{
+	search, err := s.discogs.Search(discogs.SearchRequest{
 		Q:            p.GetQuery(),
 		ReleaseTitle: p.GetReleaseTitle(),
-		Type:         p.GetType(),
+		Type:         "master",
 		Title:        p.GetTitle(),
 		Credit:       p.GetCredit(),
 		Artist:       p.GetArtist(),
@@ -268,6 +269,10 @@ func (s *Service) Search(ctx context.Context, p *vinyl.SearchParams) (*vinyl.Sea
 		Contributor:  p.GetContributor(),
 	})
 	if err != nil {
+		s.log.Error(
+			"failed to execute search operation",
+			zap.Error(err),
+		)
 		return nil, errors.Wrap(err, "failed to execute search operation")
 	}
 
@@ -279,17 +284,17 @@ func (s *Service) Search(ctx context.Context, p *vinyl.SearchParams) (*vinyl.Sea
 			Release: &vinyl.ReleaseSource{
 				Catno:       res.Catno,
 				Format:      strings.Join(res.Format, ","),
-				Id:          int64(res.ID),
+				Id:          int32(res.ID),
 				Title:       res.Title,
 				ResourceUrl: res.ResourceURL,
 				Thumb:       res.Thumb,
-				Year:        year,
+				Year:        int32(year),
 				Type:        res.Type,
 			},
 			Pagination: &vinyl.Pagination{
-				PerPage: int64(search.Pagination.PerPage),
-				Page:    int64(search.Pagination.Page),
-				Items:   int64(search.Pagination.Items),
+				PerPage: int32(search.Pagination.PerPage),
+				Page:    int32(search.Pagination.Page),
+				Items:   int32(search.Pagination.Items),
 			},
 		})
 	}
@@ -308,12 +313,28 @@ func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	sub := route.Subrouter()
 	sub.HandleFunc("/search", func(w http.ResponseWriter, r *http.Request) {
-		result, err := s.Search(r.Context(), &vinyl.SearchParams{
-			Query:  r.URL.Query().Get("query"),
-			Type:   r.URL.Query().Get("type"),
-			Title:  r.URL.Query().Get("title"),
-			Artist: r.URL.Query().Get("artist"),
-		})
+		var params vinyl.SearchParams
+		switch r.Method {
+		case http.MethodGet:
+			params = vinyl.SearchParams{
+				Query:  r.URL.Query().Get("query"),
+				Type:   r.URL.Query().Get("type"),
+				Title:  r.URL.Query().Get("title"),
+				Artist: r.URL.Query().Get("artist"),
+			}
+		case http.MethodPost:
+			defer r.Body.Close()
+
+			if err := json.NewDecoder(r.Body).Decode(&params); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+		default:
+			http.Error(w, "method not allow", http.StatusMethodNotAllowed)
+			return
+		}
+
+		result, err := s.Search(r.Context(), &params)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -395,7 +416,7 @@ func (s *Service) Health(_ context.Context, _ *vinyl.HealthRequest) (*vinyl.Heal
 	}, nil
 }
 
-func (s *Service) getStored(ctx context.Context, p *vinyl.GetParams) (*vinyl.Release, error) {
+func (s *Service) getStored(ctx context.Context, p *vinyl.GetParams) (*vinyl.Master, error) {
 	doc, err := s.client.Collection(Entity).Doc(p.GetId()).Get(ctx)
 	if err != nil {
 		s, ok := status.FromError(err)
@@ -410,7 +431,7 @@ func (s *Service) getStored(ctx context.Context, p *vinyl.GetParams) (*vinyl.Rel
 		return nil, s.Err()
 	}
 
-	var res vinyl.Release
+	var res vinyl.Master
 	if err := doc.DataTo(&res); err != nil {
 		return nil, errors.Wrap(err, "failed to read document")
 	}
@@ -420,36 +441,36 @@ func (s *Service) getStored(ctx context.Context, p *vinyl.GetParams) (*vinyl.Rel
 
 func toRelease(res *discogs.Release) *vinyl.Release {
 	result := &vinyl.Release{
-		Id:          int64(res.ID),
+		Id:          int32(res.ID),
 		Title:       res.Title,
 		ArtistsSort: res.ArtistsSort,
 		DataQuality: res.DataQuality,
 		Thumb:       res.Thumb,
 		Community: &vinyl.Community{
 			DataQuality: res.Community.DataQuality,
-			Have:        int64(res.Community.Have),
+			Have:        int32(res.Community.Have),
 			Rating: &vinyl.Rating{
 				Average: res.Community.Rating.Average,
-				Count:   int64(res.Community.Rating.Count),
+				Count:   int32(res.Community.Rating.Count),
 			},
 			Status: res.Community.Status,
 			Submitter: &vinyl.Submitter{
 				ResourceUrl: res.Community.Submitter.ResourceURL,
 				Username:    res.Community.Submitter.Username,
 			},
-			Want: int64(res.Community.Want),
+			Want: int32(res.Community.Want),
 		},
 		Country:           res.Country,
 		DateAdded:         res.DateAdded,
 		DateChanged:       res.DateChanged,
-		EstimatedWeight:   int64(res.EstimatedWeight),
+		EstimatedWeight:   int32(res.EstimatedWeight),
 		Format:            nil,
 		Genres:            res.Genres,
 		LowestPrice:       float32(res.LowestPrice),
-		MasterId:          int64(res.MasterID),
+		MasterId:          int32(res.MasterID),
 		MasterUrl:         res.MasterURL,
 		Notes:             res.Notes,
-		NumberForSale:     int64(res.NumForSale),
+		NumberForSale:     int32(res.NumForSale),
 		Released:          res.Released,
 		ReleasedFormatted: res.ReleasedFormatted,
 		ResourceUrl:       res.ResourceURL,
@@ -463,13 +484,12 @@ func toRelease(res *discogs.Release) *vinyl.Release {
 		Status: res.Status,
 		Styles: res.Styles,
 		Uri:    res.URI,
-		Year:   int64(res.Year),
+		Year:   int32(res.Year),
 	}
 
 	result.Artists = make([]*vinyl.ArtistSource, len(res.Artists))
 	for i, artist := range res.Artists {
 		result.Artists[i] = toArtist(artist)
-		fmt.Println(result.Artists[i])
 	}
 
 	result.ExtraArtists = make([]*vinyl.ArtistSource, len(res.ExtraArtists))
@@ -503,7 +523,7 @@ func toRelease(res *discogs.Release) *vinyl.Release {
 			Catno:          cmp.Catno,
 			EntityType:     cmp.EntityType,
 			EntityTypeName: cmp.EntityTypeName,
-			Id:             int64(cmp.ID),
+			Id:             int32(cmp.ID),
 			Name:           cmp.Name,
 			ResourceUrl:    cmp.ResourceURL,
 		}
@@ -513,7 +533,7 @@ func toRelease(res *discogs.Release) *vinyl.Release {
 	for i, vid := range res.Videos {
 		result.Videos[i] = &vinyl.Video{
 			Description: vid.Description,
-			Duration:    int64(vid.Duration),
+			Duration:    int32(vid.Duration),
 			Embed:       vid.Embed,
 			Title:       vid.Title,
 			Uri:         vid.URI,
@@ -531,8 +551,8 @@ func toRelease(res *discogs.Release) *vinyl.Release {
 	result.Images = make([]*vinyl.Image, len(res.Images))
 	for i, img := range res.Images {
 		result.Images[i] = &vinyl.Image{
-			Height:      int64(img.Height),
-			Width:       int64(img.Width),
+			Height:      int32(img.Height),
+			Width:       int32(img.Width),
 			ResourceUrl: img.ResourceURL,
 			Type:        img.Type,
 			Uri:         img.URI,
@@ -546,7 +566,7 @@ func toRelease(res *discogs.Release) *vinyl.Release {
 			Catno:          lbl.Catno,
 			EntityType:     lbl.EntityType,
 			EntityTypeName: lbl.EntityTypeName,
-			Id:             int64(lbl.ID),
+			Id:             int32(lbl.ID),
 			Name:           lbl.Name,
 			ResourceUrl:    lbl.ResourceURL,
 		}
@@ -563,10 +583,76 @@ func toRelease(res *discogs.Release) *vinyl.Release {
 	return result
 }
 
+func toMaster(res *discogs.Master) *vinyl.Master {
+	result := &vinyl.Master{
+		Id:            int32(res.ID),
+		Title:         res.Title,
+		DataQuality:   res.DataQuality,
+		Genres:        res.Genres,
+		LowestPrice:   float32(res.LowestPrice),
+		Notes:         res.Notes,
+		NumberForSale: int32(res.NumForSale),
+		ResourceUrl:   res.ResourceURL,
+		Styles:        res.Styles,
+		Uri:           res.URI,
+		Year:          int32(res.Year),
+	}
+
+	result.Artists = make([]*vinyl.ArtistSource, len(res.Artists))
+	for i, artist := range res.Artists {
+		result.Artists[i] = toArtist(artist)
+	}
+
+	result.TrackList = make([]*vinyl.Track, len(res.Tracklist))
+	for i, track := range res.Tracklist {
+		result.TrackList[i] = &vinyl.Track{
+			Duration: track.Duration,
+			Position: track.Position,
+			Title:    track.Title,
+			Type:     track.Type,
+		}
+
+		result.TrackList[i].Artists = make([]*vinyl.ArtistSource, len(track.Artists))
+		for j, artist := range track.Artists {
+			result.TrackList[i].Artists[j] = toArtist(artist)
+		}
+
+		result.TrackList[i].Extraartists = make([]*vinyl.ArtistSource, len(track.Extraartists))
+		for j, artist := range track.Extraartists {
+			result.TrackList[i].Extraartists[j] = toArtist(artist)
+		}
+	}
+
+	result.Videos = make([]*vinyl.Video, len(res.Videos))
+	for i, vid := range res.Videos {
+		result.Videos[i] = &vinyl.Video{
+			Description: vid.Description,
+			Duration:    int32(vid.Duration),
+			Embed:       vid.Embed,
+			Title:       vid.Title,
+			Uri:         vid.URI,
+		}
+	}
+
+	result.Images = make([]*vinyl.Image, len(res.Images))
+	for i, img := range res.Images {
+		result.Images[i] = &vinyl.Image{
+			Height:      int32(img.Height),
+			Width:       int32(img.Width),
+			ResourceUrl: img.ResourceURL,
+			Type:        img.Type,
+			Uri:         img.URI,
+			Uri150:      img.URI150,
+		}
+	}
+
+	return result
+}
+
 func toArtist(artist discogs.ArtistSource) *vinyl.ArtistSource {
 	return &vinyl.ArtistSource{
 		Anv:         artist.Anv,
-		Id:          int64(artist.ID),
+		Id:          int32(artist.ID),
 		Join:        artist.Join,
 		Name:        artist.Name,
 		ResourceUrl: artist.ResourceURL,

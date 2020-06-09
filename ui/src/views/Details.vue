@@ -1,16 +1,17 @@
 <template>
     <div class='search'>
-        <h1>Release Details</h1>
-        <div>{{ this.$store.state.getResult }}</div>
+        <Release />
     </div>
 </template>
 
 <script>
 // @ is an alias to /src
-// import Feed from '@/components/Feed.vue'
+import Release from '@/components/Release.vue'
 
 export default {
     name: 'Details',
-    components: {}
-}
+    components: {
+        Release,
+    },
+};
 </script>

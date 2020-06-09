@@ -5,8 +5,8 @@
         <v-col class='login' cols='8'>
           <v-row align='center' justify='center'>
             <v-card class='elevation-12'>
-              <v-card-text>
-                <v-form @submit.prevent='handleSubmit' id='login-form' ref='form' lazy-validation>
+              <v-form @submit.prevent='handleSubmit' id='login-form' ref='form'>
+                <v-card-text>
                   <v-text-field 
                     label='Login' 
                     name='login' 
@@ -23,15 +23,15 @@
                     type='password'
                     v-model='password'
                   />
-                </v-form>
-              </v-card-text>
-              <v-card-actions>
-                <v-spacer />
-                <v-btn form='login-form' @click='handleSubmit' color='primary' class>Login</v-btn>
-              </v-card-actions>
+                </v-card-text>
+                <v-card-actions>
+                  <v-spacer />
+                  <v-btn type='submit' color='primary' class>Login</v-btn>
+                </v-card-actions>
+              </v-form>
             </v-card>
           </v-row>
-          <v-row align='center' justify='center' class='social'>
+          <!-- <v-row align='center' justify='center' class='social'>
             <v-card class='elevation-12'>
               <a href="/auth/github">
                 <button class="btn-auth btn-github">
@@ -40,7 +40,7 @@
                 </button>
               </a>
             </v-card>
-          </v-row>
+          </v-row> -->
           <v-row align='center' justify='center' class='create-account'>
             <router-link to='/account/create'>Create Account</router-link>
             <span>|</span>
@@ -49,11 +49,18 @@
         </v-col>
       </v-row>
     </v-container>
+    <v-snackbar v-model='ShowError' right>
+      {{ LoginError }}
+      <v-btn color="pink" text>
+        Close
+      </v-btn>
+    </v-snackbar>
   </v-content>
 </template>
 
-<script>
+<script lang="ts">
 import { Component, Vue } from 'vue-property-decorator';
+// import { mapGetters } from 'vuex'
 import CreateAccount from './CreateAccount.vue';
 import ResetPassword from './ResetPassword.vue';
 
@@ -64,15 +71,51 @@ import ResetPassword from './ResetPassword.vue';
 	}
 })
 export default class Login extends Vue {
-  data() {
+  private email: string;
+  private password: string;
+  private snackbar: boolean;
+
+  constructor() {
+    super();
+    this.email = '';
+    this.password = '';
+    this.snackbar = false;
+  }
+
+  get ShowError(): boolean {
+    const e: string = this.$store.getters.getLoginError;
+    this.snackbar = e !== '';
+    return e !== '';
+  }
+
+  set ShowError(show: boolean) {
+    this.snackbar = show;
+  }
+
+  get LoginError(): string {
+    return this.$store.getters.getLoginError;
+  }
+
+  get Account(): any {
+    return this.$store.getters.getAccount;
+  }
+
+  computed() {
     return {
       email: '',
-      password: ''
+      password: '',
+      snackbar: false,
     }
   }
 
-  handleSubmit() {
-    this.email = '';
+  async handleSubmit() {
+    await this.$store.dispatch('login', { 
+      email: this.email, 
+      password: this.password,
+    });
+    if (this.$store.getters.getAccount !== null) {
+      this.$router.push('/account');
+    }
   }
 }
 </script>

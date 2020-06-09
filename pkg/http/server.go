@@ -10,6 +10,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/gorilla/mux"
+	"github.com/rs/cors"
 	"github.com/soheilhy/cmux"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
@@ -93,8 +94,13 @@ func (s *Server) Serve() error {
 	spa := spaHandler{staticPath: "./ui/dist", indexPath: ""}
 	mx.Use(s.Logger)
 	mx.NotFoundHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodOptions {
+			s.log.Info("options")
+		}
 		spa.ServeHTTP(w, r)
 	})
+
+	s.http.Handler = cors.AllowAll().Handler(mx)
 
 	g := new(errgroup.Group)
 	g.Go(func() error { return s.rpc.Serve(grpcListener) })

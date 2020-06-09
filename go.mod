@@ -12,14 +12,16 @@ require (
 	github.com/golang/protobuf v1.3.2
 	github.com/google/go-github/v31 v31.0.0
 	github.com/google/uuid v1.1.1
+	github.com/gorilla/handlers v1.4.2
 	github.com/gorilla/mux v1.7.4
 	github.com/grpc-ecosystem/go-grpc-middleware v1.1.0
 	github.com/grpc-ecosystem/grpc-gateway v1.11.3
-	github.com/irlndts/go-discogs v0.2.5
 	github.com/ninnemana/drudge v0.1.2-0.20200328191329-a1c1b087f750
+	github.com/ninnemana/go-discogs v0.2.5-0.20200606155508-e2bcc3acd5a9
 	github.com/opentracing/opentracing-go v1.1.1-0.20190913142402-a7454ce5950e
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.4.0 // indirect
+	github.com/rs/cors v1.7.0
 	github.com/soheilhy/cmux v0.1.4
 	github.com/uber/jaeger-client-go v2.22.1+incompatible
 	go.opencensus.io v0.22.2

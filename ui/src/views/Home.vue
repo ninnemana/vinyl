@@ -1,8 +1,10 @@
 <template>
-	<div class='home'>
+	<v-container>
 		<img alt='VinylTap Logo' src='../assets/logo.png' />
-		<Searchbox />
-	</div>
+		<v-card class='search'>
+			<Searchbox />
+		</v-card>
+	</v-container>
 </template>
 
 <script>
@@ -16,3 +18,8 @@ export default {
 	}
 };
 </script>
+<style lang='scss'>
+.search {
+	margin: 2em;
+}
+</style>

@@ -81,7 +81,6 @@ export default {
       
       const acct = new AccountRequest(this.username, this.email, this.password)
       if (!acct.valid()) {
-        // console.log(acct.errors);
         return;
       }
 

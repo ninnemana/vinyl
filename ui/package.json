@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "serve": "VUE_APP_API_DOMAIN=http://localhost:8080 vue-cli-service serve",
+    "serve": "VUE_APP_API_DOMAIN=http://localhost:8080 vue-cli-service serve --port 3000",
     "build": "VUE_APP_API_DOMAIN=https://vinyl-tap-267514.appspot.com vue-cli-service build",
     "lint": "vue-cli-service lint"
   },
@@ -11,12 +11,15 @@
     "@mdi/font": "^4.9.95",
     "axios": "^0.19.2",
     "core-js": "^3.6.4",
+    "js-cookie": "^2.2.1",
     "vue": "^2.6.11",
     "vue-class-component": "^7.2.2",
     "vue-property-decorator": "^8.3.0",
     "vue-router": "^3.1.5",
     "vuetify": "^2.2.14",
-    "vuex": "^3.1.2"
+    "vuex": "^3.1.2",
+    "vuex-persist": "^2.2.0",
+    "vuex-persistedstate": "^3.0.1"
   },
   "devDependencies": {
     "@fortawesome/fontawesome-free": "^5.13.0",

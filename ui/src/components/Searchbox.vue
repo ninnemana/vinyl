@@ -1,6 +1,6 @@
 <template>
 	<form class='search' @submit.prevent='handleSubmit'>
-		<input type='search' v-model='term' placeholder='Discover something new ..' />
+		<input type='search' v-model='term' :placeholder='label' />
 	</form>
 </template>
 
@@ -11,6 +11,7 @@ import { Component, Prop, Vue } from 'vue-property-decorator';
 export default class Searchbox extends Vue {
 	@Prop() private query!: string;
 	private term!: string;
+	private label!: string;
 
 	private handleSubmit() {
 		this.$store.dispatch('search', this.term);
@@ -20,6 +21,7 @@ export default class Searchbox extends Vue {
 	private data() {
 		return { 
 			term: '',
+			label: 'Discover something new ...',
 		};
 	}
 }

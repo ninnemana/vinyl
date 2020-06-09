@@ -1,10 +1,22 @@
+import axios, { AxiosRequestConfig, AxiosResponse } from 'axios'
+// import * as Cookies from 'js-cookie'
 import Vue from 'vue'
 import Vuex from 'vuex'
-import axios, { AxiosResponse } from 'axios'
+import VuexPersist from 'vuex-persist'
 
 Vue.use(Vuex)
 
+const vuexLocalStorage = new VuexPersist({
+	key: 'vinylshare', // The key to store the state on in the storage provider.
+	storage: window.localStorage, // or window.sessionStorage or localForage
+	// Function that passes the state and returns the state with only the objects you want to store.
+	// reducer: state => state,
+	// Function that passes a mutation and lets you decide if it should update the state in localStorage.
+	// filter: mutation => (true)
+})
+
 export default new Vuex.Store({
+	plugins: [vuexLocalStorage.plugin],
 	state: {
 		searchTerm: '',
 		searchResults: [] as any[],
@@ -13,13 +25,14 @@ export default new Vuex.Store({
 		searchError: {},
 		getError: {},
 		authorized: null,
-		account: {},
+		account: {} as any,
+		loginError: '',
 	},
 	mutations: {
-		SET_SEARCH_TERM: (state, term) => {
+		SET_SEARCH_TERM(state: any, term: string) {
 			state.searchTerm = term;
 		},
-		SET_SEARCH_RESULTS: (state, res) => {
+		SET_SEARCH_RESULTS(state: any, res: any) {
 			const results: any[] = [];
 			res.forEach((result: any, i: number) => {
 				if (i === 0) {
@@ -30,20 +43,23 @@ export default new Vuex.Store({
 			});
 			state.searchResults = results;
 		},
-		SET_SEARCH_ERROR: (state, error) => {
-			state.searchError = error;
+		SET_SEARCH_ERROR(state: any, err: Error) {
+			state.searchError = err;
 		},
-		SET_SEARCH_PAGE: (state, page) => {
+		SET_SEARCH_PAGE(state: any, page: number) {
 			state.searchPagination = page;
 		},
-		SET_GET_RESULT: (state, result) => {
+		SET_GET_RESULT(state: any, result: any) {
 			state.getResult = result;
 		},
-		SET_GET_ERROR: (state, error) => {
+		SET_GET_ERROR(state: any, error: Error) {
 			state.getError = error;
 		},
-		SET_ACCOUNT: (state, account) => {
+		SET_ACCOUNT(state: any, account: any) {
 			state.account = account;
+		},
+		SET_LOGIN_ERROR(state: any, error: Error) {
+			state.loginError = error;
 		},
 	},
 	actions: {
@@ -68,12 +84,16 @@ export default new Vuex.Store({
 		},
 		search({ commit }, query: string) {
 			commit('SET_SEARCH_TERM', query)
+			
 			axios({
 				method: 'post',
-				url: `${process.env.VUE_APP_API_DOMAIN}/search`,
+				url: `${process.env.VUE_APP_API_DOMAIN}/vinyls/search`,
 				data: { artist: query },
-			}).then((r: AxiosResponse) => {
-				commit('SET_SEARCH_RESULTS', r.data);
+				headers: { 
+					Authorization: `Bearer ${this.state.account.token}`,
+				},
+			} as AxiosRequestConfig).then((r: AxiosResponse) => {
+				commit('SET_SEARCH_RESULTS', r.data.results);
 			}).catch((error: { response: { data: {} } }) => {
 				if (!error.response) {
 					commit('SET_SEARCH_ERROR', 'Failed to retrieve results.');
@@ -87,26 +107,56 @@ export default new Vuex.Store({
 			axios({
 				method: 'get',
 				url: `${process.env.VUE_APP_API_DOMAIN}/vinyls/${id}`,
+				headers: {
+					Authorization: `Bearer ${this.state.account.token}`,
+				},
 			}).then((r: AxiosResponse) => {
-				commit('SET_GET_RESULT', r.data);
+				commit('SET_GET_RESULT', r.data)
 			}).catch((error: { response: { data: {} } }) => {
 				if (!error.response) {
 					commit('SET_GET_ERROR', 'Failed to retrieve result.');
 					return;
 				}
 
-				commit('SET_GET_ERROR', error.response.data);
+				commit('SET_GET_ERROR', error.response.data)
 			});
 		},
+		login({ commit }, auth: { email: string; password: string }) {
+			axios({
+				method: 'post',
+				url: `${process.env.VUE_APP_API_DOMAIN}/auth`,
+				data: auth,
+			}).then((r: AxiosResponse) => {
+				console.log('set account', r.data);
+				
+				commit('SET_ACCOUNT', r.data);
+			}).catch((error: { response: { data: {} } }) => {
+				if (!error.response || !error.response.data) {
+					commit('SET_LOGIN_ERROR', 'Failed to login.');
+					return;
+				}
+
+				commit('SET_LOGIN_ERROR', error.response.data);
+			});
+		},
+		// logout({ commit }) {
+		// 	commit('SET_LOGOUT_SESSION');
+		// },
 	},
 	modules: {
 	},
 	getters: {
-		getResult: (state) => {
+		getResult: (state: any) => {
 			return state.getResult;
 		},
-		searchResults: (state) => {
+		searchResults: (state: any) => {
 			return state.searchResults;
+		},
+		getAccount: (state: any) => {
+			return state.account;
+		},
+		getLoginError: (state: any) => {
+			return state.loginError;
 		},
 	}
 })

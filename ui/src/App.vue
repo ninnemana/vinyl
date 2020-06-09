@@ -1,22 +1,53 @@
 <template>
-  <div id='app'>
-    <div id='nav'>
-      <router-link to='/'>Home</router-link> |
-      <router-link to='/about'>About</router-link>
-      <AuthorizationLink />
-    </div>
-    <router-view/>
-  </div>
+  <v-app>
+    <v-app-bar app short dark>
+      <v-app-bar-nav-icon></v-app-bar-nav-icon>
+      <v-toolbar-title>
+        <router-link to='/'>Vinylshare.io</router-link>
+      </v-toolbar-title>
+      <v-spacer></v-spacer>
+      <v-btn icon>
+        <v-icon>mdi-magnify</v-icon>
+      </v-btn>
+
+      <v-menu left bottom>
+        <template v-slot:activator="{ on, attrs }">
+          <v-btn
+            text
+            v-bind="attrs"
+            v-on="on"
+          >
+            <v-icon>mdi-dots-vertical</v-icon>
+          </v-btn>
+        </template>
+
+        <AuthorizationList :authorized='Authed' />
+      </v-menu>
+    </v-app-bar>
+    <v-sheet class="body">
+      <router-view/>
+    </v-sheet>
+  </v-app>
 </template>
 
-<script>
+<script lang='ts'>
 // @ is an alias to /src
-import AuthorizationLink from '@/components/AuthorizationLink.vue'
+import AuthorizationList from '@/components/AuthorizationList.vue'
+import { Component, Vue } from 'vue-property-decorator';
 
-export default {
-    name: 'App',
-    components: {
-      AuthorizationLink
+@Component({
+  components: {
+    AuthorizationList,
+  }
+})
+export default class App extends Vue {
+    get Authed(): boolean {
+      const acct = this.$store.getters.getAccount;
+      if (acct === null || acct.user === undefined) {
+        return false;
+      }
+
+      return true;
     }
 }
 </script>
@@ -41,5 +72,9 @@ export default {
       color: #42b983;
     }
   }
+}
+
+.body {
+  padding-top: 80px;
 }
 </style>

@@ -13,7 +13,7 @@ option go_package = "vinyl";
 message Alias {
 	option (gogoproto.goproto_getters) = false;
 	option (gogoproto.typedecl) = false;
-	int64 id = 1 [(gogoproto.casttype) = "int", (gogoproto.customname) = "ID"];
+	int32 id = 1 [(gogoproto.casttype) = "int", (gogoproto.customname) = "ID"];
 	string name = 2;
 	string resource_url = 3 [(gogoproto.customname) = "ResourceURL"];
 }
@@ -23,7 +23,7 @@ message ArtistSource {
 	option (gogoproto.goproto_getters) = false;
 	option (gogoproto.typedecl) = false;
 	string anv = 1;
-	int64 id = 2 [(gogoproto.casttype) = "int", (gogoproto.customname) = "ID"];
+	int32 id = 2 [(gogoproto.casttype) = "int", (gogoproto.customname) = "ID"];
 	string join = 3;
 	string name = 4;
 	string resource_url = 5 [(gogoproto.customname) = "ResourceURL"];
@@ -37,11 +37,11 @@ message Community {
 	option (gogoproto.typedecl) = false;
 	repeated Contributor contributors = 1 [(gogoproto.nullable) = false];
 	string data_quality = 2;
-	int64 have = 3 [(gogoproto.casttype) = "int"];
+	int32 have = 3 [(gogoproto.casttype) = "int"];
 	Rating rating = 4 [(gogoproto.nullable) = false];
 	string status = 5;
 	Submitter submitter = 6 [(gogoproto.nullable) = false];
-	int64 want = 7 [(gogoproto.casttype) = "int"];
+	int32 want = 7 [(gogoproto.casttype) = "int"];
 }
 
 // Company ...
@@ -51,7 +51,7 @@ message Company {
 	string catno = 1;
 	string entity_type = 2;
 	string entity_type_name = 3;
-	int64 id = 4 [(gogoproto.casttype) = "int", (gogoproto.customname) = "ID"];
+	int32 id = 4 [(gogoproto.casttype) = "int", (gogoproto.customname) = "ID"];
 	string name = 5;
 	string resource_url = 6 [(gogoproto.customname) = "ResourceURL"];
 }
@@ -91,8 +91,8 @@ message Identifier {
 message Image {
 	option (gogoproto.goproto_getters) = false;
 	option (gogoproto.typedecl) = false;
-	int64 height = 1 [(gogoproto.casttype) = "int"];
-	int64 width = 2 [(gogoproto.casttype) = "int"];
+	int32 height = 1 [(gogoproto.casttype) = "int"];
+	int32 width = 2 [(gogoproto.casttype) = "int"];
 	string resource_url = 3 [(gogoproto.customname) = "ResourceURL"];
 	string type = 4;
 	string uri = 5 [(gogoproto.customname) = "URI"];
@@ -106,7 +106,7 @@ message LabelSource {
 	string catno = 1;
 	string entity_type = 2;
 	string entity_type_name = 3;
-	int64 id = 4 [(gogoproto.casttype) = "int", (gogoproto.customname) = "ID"];
+	int32 id = 4 [(gogoproto.casttype) = "int", (gogoproto.customname) = "ID"];
 	string name = 5;
 	string resource_url = 6 [(gogoproto.customname) = "ResourceURL"];
 }
@@ -116,7 +116,7 @@ message Member {
 	option (gogoproto.goproto_getters) = false;
 	option (gogoproto.typedecl) = false;
 	bool active = 1;
-	int64 id = 2 [(gogoproto.casttype) = "int", (gogoproto.customname) = "ID"];
+	int32 id = 2 [(gogoproto.casttype) = "int", (gogoproto.customname) = "ID"];
 	string name = 3;
 	string resource_url = 4 [(gogoproto.customname) = "ResourceURL"];
 }
@@ -125,11 +125,11 @@ message Member {
 message Page {
 	option (gogoproto.goproto_getters) = false;
 	option (gogoproto.typedecl) = false;
-	int64 per_page = 1 [(gogoproto.casttype) = "int"];
-	int64 items = 2 [(gogoproto.casttype) = "int"];
-	int64 page = 3 [(gogoproto.casttype) = "int"];
+	int32 per_page = 1 [(gogoproto.casttype) = "int"];
+	int32 items = 2 [(gogoproto.casttype) = "int"];
+	int32 page = 3 [(gogoproto.casttype) = "int"];
 	URLsList urls = 4 [(gogoproto.customname) = "URLs", (gogoproto.nullable) = false];
-	int64 pages = 5 [(gogoproto.casttype) = "int"];
+	int32 pages = 5 [(gogoproto.casttype) = "int"];
 }
 
 // Rating ...
@@ -137,7 +137,7 @@ message Rating {
 	option (gogoproto.goproto_getters) = false;
 	option (gogoproto.typedecl) = false;
 	float average = 1;
-	int64 count = 2 [(gogoproto.casttype) = "int"];
+	int32 count = 2 [(gogoproto.casttype) = "int"];
 }
 
 // ReleaseSource ...
@@ -147,21 +147,21 @@ message ReleaseSource {
 	string artist = 1;
 	string catno = 2;
 	string format = 3;
-	int64 id = 4 [(gogoproto.casttype) = "int", (gogoproto.customname) = "ID"];
+	int32 id = 4 [(gogoproto.casttype) = "int", (gogoproto.customname) = "ID"];
 	string resource_url = 5 [(gogoproto.customname) = "ResourceURL"];
 	string status = 6;
 	string thumb = 7;
 	string title = 8;
-	int64 year = 9 [(gogoproto.casttype) = "int"];
-	int64 main_release = 10 [(gogoproto.casttype) = "int"];
+	int32 year = 9 [(gogoproto.casttype) = "int"];
+	int32 main_release = 10 [(gogoproto.casttype) = "int"];
 	string role = 11;
 	string type = 12;
 }
 
 message Pagination {
-	int64 page = 1;
-	int64 items = 2;
-	int64 per_page = 3;
+	int32 page = 1;
+	int32 items = 2;
+	int32 per_page = 3;
 }
 
 message ReleaseResponse {
@@ -191,8 +191,8 @@ message Result {
 	repeated string genre = 12;
 	string resource_url = 13 [(gogoproto.customname) = "ResourceURL"];
 	string type = 14;
-	int64 id = 15 [(gogoproto.casttype) = "int", (gogoproto.customname) = "ID"];
-	int64 master_id = 16 [(gogoproto.casttype) = "int", (gogoproto.customname) = "MasterID"];
+	int32 id = 15 [(gogoproto.casttype) = "int", (gogoproto.customname) = "ID"];
+	int32 master_id = 16 [(gogoproto.casttype) = "int", (gogoproto.customname) = "MasterID"];
 }
 
 // SearchService ...
@@ -206,7 +206,7 @@ message Sublable {
 	option (gogoproto.goproto_getters) = false;
 	option (gogoproto.typedecl) = false;
 	string resource_url = 1 [(gogoproto.customname) = "ResourceURL"];
-	int64 id = 2 [(gogoproto.casttype) = "int", (gogoproto.customname) = "ID"];
+	int32 id = 2 [(gogoproto.casttype) = "int", (gogoproto.customname) = "ID"];
 	string name = 3;
 }
 
@@ -245,7 +245,7 @@ message Version {
 	string catno = 1;
 	string country = 2;
 	string format = 3;
-	int64 id = 4 [(gogoproto.casttype) = "int", (gogoproto.customname) = "ID"];
+	int32 id = 4 [(gogoproto.casttype) = "int", (gogoproto.customname) = "ID"];
 	string label = 5;
 	string released = 6;
 	string resource_url = 7 [(gogoproto.customname) = "ResourceURL"];
@@ -259,14 +259,37 @@ message Video {
 	option (gogoproto.goproto_getters) = false;
 	option (gogoproto.typedecl) = false;
 	string description = 1;
-	int64 duration = 2 [(gogoproto.casttype) = "int"];
+	int32 duration = 2 [(gogoproto.casttype) = "int"];
 	bool embed = 3;
 	string title = 4;
 	string uri = 5 [(gogoproto.customname) = "URI"];
 }
 
+message Master {
+	int32 id = 1;
+	string title = 2;
+	repeated ArtistSource artists = 3;
+	repeated string styles = 4;
+	repeated string genres = 5;
+	int32 year = 6;
+	repeated Track track_list = 7;
+	string notes = 8;
+	repeated Image images = 9;
+	repeated Video videos = 10;
+	int32 number_for_sale = 11;
+	float lowest_price = 12;
+	string uri = 13;
+	int32 main_release = 14;
+	string main_release_url = 15;
+	int32 most_recent_release = 16;
+	string most_recent_release_url = 17;
+	string versions_url = 18;
+	string resource_url = 19;
+	string data_quality = 20;
+}
+
 message Release {
-	int64 id = 1;
+	int32 id = 1;
 	string title = 2;
 	repeated ArtistSource artists = 3;
 	string artists_sort = 4;
@@ -277,7 +300,7 @@ message Release {
 	string country = 9;
 	string date_added = 10;
 	string date_changed = 11;
-	int64 estimated_weight = 12;
+	int32 estimated_weight = 12;
 	repeated ArtistSource extra_artists = 13;
 	repeated Format format = 14;
 	repeated string genres = 15;
@@ -285,10 +308,10 @@ message Release {
 	repeated Image images = 17;
 	repeated LabelSource labels = 18;
 	float lowest_price = 19;
-	int64 master_id = 20;
+	int32 master_id = 20;
 	string master_url = 21;
 	string notes = 22;
-	int64 number_for_sale = 23;
+	int32 number_for_sale = 23;
 	string released = 24;
 	string released_formatted = 25;
 	string resource_url = 26;
@@ -298,7 +321,7 @@ message Release {
 	repeated Track track_list = 30;
 	string uri = 31;
 	repeated Video videos = 32;
-	int64 year = 33;
+	int32 year = 33;
 }
 
 message ListResponse {
@@ -313,6 +336,7 @@ message ListParams {
 
 message GetParams {
 	string id = 1;
+	string type = 2;
 }
 
 message SearchParams {
@@ -357,7 +381,7 @@ message BadRequest {
 		}
 	};
 	
-	int64 code = 1;
+	int32 code = 1;
 	string message = 2;
 }
 
@@ -471,7 +495,7 @@ service Vinyl {
 			summary: "Get Registered Vinyls";
 		};
 	}
-    rpc Get(GetParams) returns (Release) {
+    rpc Get(GetParams) returns (Master) {
 		option (google.api.http) = {
             get: "/vinyls/{id}";
         };
