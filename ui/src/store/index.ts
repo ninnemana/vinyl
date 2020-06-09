@@ -127,8 +127,6 @@ export default new Vuex.Store({
 				url: `${process.env.VUE_APP_API_DOMAIN}/auth`,
 				data: auth,
 			}).then((r: AxiosResponse) => {
-				console.log('set account', r.data);
-				
 				commit('SET_ACCOUNT', r.data);
 			}).catch((error: { response: { data: {} } }) => {
 				if (!error.response || !error.response.data) {
