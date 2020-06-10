@@ -118,6 +118,10 @@ jobs:
 
       # Deploy App to App Engine
       - name: Deploy
+        env:
+          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
+          JWT_ACCESS_SECRET: ${{ secrets.JWT_ACCESS_SECRET }}
         run: |
           export GOPATH=$HOME/go
           export GOBIN=$(go env GOPATH)/bin
