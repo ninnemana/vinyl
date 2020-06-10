@@ -11,6 +11,7 @@ import (
 	userStore "github.com/ninnemana/vinyl/pkg/users/firestore"
 	vinylStore "github.com/ninnemana/vinyl/pkg/vinyl/firestore"
 	"go.uber.org/zap"
+	"google.golang.org/api/option"
 )
 
 var (
@@ -20,6 +21,7 @@ var (
 	redirectURL  = os.Getenv("BASE_URL") + "/auth/redirect"
 	clientID     = os.Getenv("GITHUB_CLIENT_ID")
 	clientSecret = os.Getenv("GITHUB_CLIENT_SECRET")
+	svcAcctFile  = os.Getenv("GCLOUD_SERVICE_ACCT_FILE")
 )
 
 func Initialize(log *zap.Logger) error {
@@ -35,6 +37,14 @@ func Initialize(log *zap.Logger) error {
 		return err
 	}
 
+	var googleAuthOptions []option.ClientOption
+	if svcAcctFile != "" {
+		googleAuthOptions = append(
+			googleAuthOptions,
+			option.WithCredentialsFile(svcAcctFile),
+		)
+	}
+
 	svc, err := vinylStore.New(
 		context.Background(),
 		vinylStore.Config{
@@ -43,6 +53,7 @@ func Initialize(log *zap.Logger) error {
 			DiscogsAPIKey:   discogsKey,
 			Hostname:        hostname,
 			Tokenizer:       tokenizer,
+			Options:         googleAuthOptions,
 		},
 	)
 	if err != nil {
@@ -53,7 +64,7 @@ func Initialize(log *zap.Logger) error {
 		return err
 	}
 
-	userSvc, err := userStore.New(ctx, log, projectID)
+	userSvc, err := userStore.New(ctx, log, projectID, googleAuthOptions...)
 	if err != nil {
 		return err
 	}
