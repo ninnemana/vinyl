@@ -15,6 +15,7 @@ import (
 	"github.com/opentracing/opentracing-go"
 	"go.uber.org/zap"
 	"google.golang.org/api/iterator"
+	"google.golang.org/api/option"
 	"google.golang.org/grpc"
 )
 
@@ -27,8 +28,8 @@ type Service struct {
 	firestore *firestore.Client
 }
 
-func New(ctx context.Context, l *zap.Logger, projectID string) (*Service, error) {
-	client, err := firestore.NewClient(ctx, projectID)
+func New(ctx context.Context, l *zap.Logger, projectID string, opts ...option.ClientOption) (*Service, error) {
+	client, err := firestore.NewClient(ctx, projectID, opts...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Firestore client: %w", err)
 	}

@@ -18,6 +18,7 @@ import (
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 	"google.golang.org/api/iterator"
+	"google.golang.org/api/option"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -46,6 +47,7 @@ type Config struct {
 	DiscogsAPIKey   string
 	Hostname        string
 	Tokenizer       auth.Tokenizer
+	Options         []option.ClientOption
 }
 
 func New(ctx context.Context, cfg Config) (*Service, error) {
@@ -61,7 +63,7 @@ func New(ctx context.Context, cfg Config) (*Service, error) {
 		return nil, errors.Wrap(err, "failed to create discogs client")
 	}
 
-	client, err := firestore.NewClient(ctx, cfg.GoogleProjectID)
+	client, err := firestore.NewClient(ctx, cfg.GoogleProjectID, cfg.Options...)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create firestore client")
 	}
