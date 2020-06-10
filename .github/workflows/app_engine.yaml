@@ -139,6 +139,6 @@ jobs:
           rm -rf node_modules public src
           cd ../
           which envsubst
-          env
           envsubst < app.template.yaml > app.yaml
+          cat app.yaml
           gcloud app deploy --promote --stop-previous-version --quiet
