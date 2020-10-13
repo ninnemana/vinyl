@@ -9,7 +9,7 @@ import "github.com/ninnemana/vinyl/pkg/users/users.proto";
 
 option (gogoproto.protosizer_all) = true;
 option (gogoproto.sizer_all) = false;
-option go_package = "auth";
+option go_package = "github.com/ninnemana/vinyl/pkg/auth";
 
 message HealthRequest {
 	string uptime = 1;

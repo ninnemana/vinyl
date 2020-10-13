@@ -8,7 +8,7 @@ import "protoc-gen-swagger/options/annotations.proto";
 
 option (gogoproto.protosizer_all) = true;
 option (gogoproto.sizer_all) = false;
-option go_package = "users";
+option go_package = "github.com/ninnemana/vinyl/pkg/users";
 
 message HealthRequest {
 	string uptime = 1;
