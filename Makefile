@@ -20,7 +20,7 @@ godeps:
 
 prototool: godeps
 	@curl -sSL \
-		https://github.com/uber/prototool/releases/download/v1.9.0/prototool-${UNAME_OS}-${UNAME_ARCH} \
+		https://github.com/uber/prototool/releases/download/v1.10.0/prototool-${UNAME_OS}-${UNAME_ARCH} \
 		-o ./prototool
 	@chmod u+x ./prototool
 
