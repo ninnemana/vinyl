@@ -1,10 +1,13 @@
 package log
 
 import (
+	"context"
 	"os"
 	"time"
 
+	"cloud.google.com/go/logging"
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
+	"github.com/jonstaryuk/gcloudzap"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -14,16 +17,13 @@ const (
 	defaultLevel = -1
 )
 
-var (
-	customTimeFormat string
-	Logger           *zap.Logger
-)
+type Closer func() error
 
 func customTimeEncoder(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
-	enc.AppendString(t.Format(customTimeFormat))
+	enc.AppendString(t.Format(timeFormat))
 }
 
-func Init() (*zap.Logger, error) {
+func Init() (*zap.Logger, Closer, error) {
 	globalLevel := zapcore.Level(defaultLevel)
 
 	// High-priority output should also go to standard error, and low-priority
@@ -44,7 +44,6 @@ func Init() (*zap.Logger, error) {
 	var useCustomTimeFormat bool
 	ecfg := zap.NewProductionEncoderConfig()
 	if len(timeFormat) > 0 {
-		customTimeFormat = timeFormat
 		ecfg.EncodeTime = customTimeEncoder
 		useCustomTimeFormat = true
 	}
@@ -57,15 +56,19 @@ func Init() (*zap.Logger, error) {
 		zapcore.NewCore(consoleEncoder, consoleInfos, lowPriority),
 	)
 
-	// From a zapcore.Core, it's easy to construct a Logger.
-	Logger = zap.New(core)
-	zap.RedirectStdLog(Logger)
-
-	if !useCustomTimeFormat {
-		Logger.Warn("time format for logger is not provided - use zap default")
+	client, err := logging.NewClient(context.Background(), os.Getenv("GCP_PROJECT_ID"))
+	if err != nil {
+		return nil, nil, err
 	}
 
-	grpc_zap.ReplaceGrpcLogger(Logger)
+	l := zap.New(gcloudzap.Tee(core, client, "vinyltap.io"))
+	zap.RedirectStdLog(l)
 
-	return Logger, nil
+	if !useCustomTimeFormat {
+		l.Warn("time format for logger is not provided - use zap default")
+	}
+
+	grpc_zap.ReplaceGrpcLogger(l)
+
+	return l, client.Close, nil
 }
