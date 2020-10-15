@@ -17,7 +17,7 @@ godeps:
 protoc:
 	@./scripts/protoc.sh
 
-generate: protoc
+generate:
 	@go generate ./...
 
 build: generate
