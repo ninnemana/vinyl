@@ -7,6 +7,11 @@ import (
 	httpserver "github.com/ninnemana/vinyl/pkg/http"
 	"github.com/ninnemana/vinyl/pkg/log"
 	"github.com/ninnemana/vinyl/pkg/router"
+	"github.com/ninnemana/vinyl/pkg/tracer"
+)
+
+var (
+	projectID = os.Getenv("GCP_PROJECT_ID")
 )
 
 func main() {
@@ -14,6 +19,17 @@ func main() {
 	zlg, err := log.Init()
 	if err != nil {
 		fmt.Printf("failed to create logger: %v\n", err)
+		os.Exit(1)
+	}
+
+	if err := tracer.Init(tracer.Config{
+		Exporter:    tracer.StackDriver,
+		ServiceName: "vinyltap",
+		Attributes: map[string]string{
+			tracer.GCPProjectID: projectID,
+		},
+	}); err != nil {
+		fmt.Printf("failed to create tracer: %v\n", err)
 		os.Exit(1)
 	}
 

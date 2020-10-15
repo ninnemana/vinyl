@@ -1,14 +1,14 @@
 syntax = "proto3";
 package users;
 
+import "google/protobuf/timestamp.proto";
 import "gogoproto/gogo.proto";
 import "google/api/annotations.proto";
-import "google/protobuf/timestamp.proto";
 import "protoc-gen-swagger/options/annotations.proto";
 
 option (gogoproto.protosizer_all) = true;
 option (gogoproto.sizer_all) = false;
-option go_package = "users";
+option go_package = "github.com/ninnemana/vinyl/pkg/users";
 
 message HealthRequest {
 	string uptime = 1;

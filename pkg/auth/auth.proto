@@ -3,13 +3,12 @@ package auth;
 
 import "gogoproto/gogo.proto";
 import "google/api/annotations.proto";
-// import "google/protobuf/empty.proto";
 import "protoc-gen-swagger/options/annotations.proto";
-import "github.com/ninnemana/vinyl/pkg/users/users.proto";
+import "pkg/users/users.proto";
 
 option (gogoproto.protosizer_all) = true;
 option (gogoproto.sizer_all) = false;
-option go_package = "auth";
+option go_package = "github.com/ninnemana/vinyl/pkg/auth";
 
 message HealthRequest {
 	string uptime = 1;
@@ -51,11 +50,7 @@ option (grpc.gateway.protoc_gen_swagger.options.openapiv2_swagger) = {
 service Authentication {
 	rpc Health(HealthRequest) returns (HealthResponse) {
 		option (google.api.http) = {
-			get: "/auth/health";
-		};
-		option (grpc.gateway.protoc_gen_swagger.options.openapiv2_operation) = {
-			description: "Returns the current state of the service";
-			summary: "Health Check";
+			get: "/auth/health"
 		};
 	}
 	rpc Authenticate(AuthRequest) returns (AuthResponse) {

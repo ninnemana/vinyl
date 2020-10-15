@@ -14,13 +14,10 @@ const (
 	defaultLevel = -1
 )
 
-var (
-	customTimeFormat string
-	Logger           *zap.Logger
-)
+type Closer func() error
 
 func customTimeEncoder(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
-	enc.AppendString(t.Format(customTimeFormat))
+	enc.AppendString(t.Format(timeFormat))
 }
 
 func Init() (*zap.Logger, error) {
@@ -44,7 +41,6 @@ func Init() (*zap.Logger, error) {
 	var useCustomTimeFormat bool
 	ecfg := zap.NewProductionEncoderConfig()
 	if len(timeFormat) > 0 {
-		customTimeFormat = timeFormat
 		ecfg.EncodeTime = customTimeEncoder
 		useCustomTimeFormat = true
 	}
@@ -57,15 +53,14 @@ func Init() (*zap.Logger, error) {
 		zapcore.NewCore(consoleEncoder, consoleInfos, lowPriority),
 	)
 
-	// From a zapcore.Core, it's easy to construct a Logger.
-	Logger = zap.New(core)
-	zap.RedirectStdLog(Logger)
+	l := zap.New(core)
+	zap.RedirectStdLog(l)
 
 	if !useCustomTimeFormat {
-		Logger.Warn("time format for logger is not provided - use zap default")
+		l.Warn("time format for logger is not provided - use zap default")
 	}
 
-	grpc_zap.ReplaceGrpcLogger(Logger)
+	grpc_zap.ReplaceGrpcLogger(l)
 
-	return Logger, nil
+	return l, nil
 }
