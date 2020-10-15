@@ -6,6 +6,7 @@ require (
 	cloud.google.com/go v0.69.1 // indirect
 	cloud.google.com/go/firestore v1.3.0
 	cloud.google.com/go/logging v1.1.0
+	contrib.go.opencensus.io/exporter/jaeger v0.2.1
 	contrib.go.opencensus.io/exporter/stackdriver v0.13.4
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/gogo/protobuf v1.3.1

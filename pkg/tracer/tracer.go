@@ -2,24 +2,87 @@ package tracer
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
+	"contrib.go.opencensus.io/exporter/jaeger"
 	"contrib.go.opencensus.io/exporter/stackdriver"
 	"go.opencensus.io/trace"
 )
 
+type Exporter string
+
+type Config struct {
+	ServiceName string
+	Exporter    Exporter
+	Attributes  map[string]string
+}
+
 var (
+	StackDriver Exporter = "stackdriver"
+	Jaeger      Exporter = "jaeger"
+
+	GCPProjectID            string = "projectID"
+	JaegerAgentEndpoint     string = "jaegerAgent"
+	JaegerCollectorEndpoint string = "jaegerCollector"
+
 	ErrorAttribute string = "error"
+
+	ErrInvalidAttributes      = errors.New("invalid tracing identifier")
+	ErrInvalidProject         = errors.New("invalid project identifier")
+	ErrInvalidJaegerAgent     = errors.New("invalid Jaeger agent endpoint")
+	ErrInvalidJaegerCollector = errors.New("invalid Jaeger collector endpoint")
 
 	unknown int32 = trace.StatusCodeUnknown
 )
 
-func Init(projectID string) error {
-	exporter, err := stackdriver.NewExporter(stackdriver.Options{
-		ProjectID: projectID,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to create new exporter: %w", err)
+func Init(cfg Config) error {
+	var exporter trace.Exporter
+
+	switch cfg.Exporter {
+	case Jaeger:
+		if cfg.Attributes == nil {
+			return ErrInvalidAttributes
+		}
+
+		if cfg.Attributes[JaegerAgentEndpoint] == "" {
+			return ErrInvalidJaegerAgent
+		}
+
+		if cfg.Attributes[JaegerCollectorEndpoint] == "" {
+			return ErrInvalidJaegerCollector
+		}
+
+		// agentEndpointURI := "localhost:6831"
+		// collectorEndpointURI := "http://localhost:14268/api/traces"
+
+		je, err := jaeger.NewExporter(jaeger.Options{
+			AgentEndpoint:     cfg.Attributes[JaegerAgentEndpoint],
+			CollectorEndpoint: cfg.Attributes[JaegerCollectorEndpoint],
+			ServiceName:       cfg.ServiceName,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to create new exporter: %w", err)
+		}
+
+		exporter = je
+	case StackDriver:
+		if cfg.Attributes == nil || cfg.Attributes[GCPProjectID] == "" {
+			return ErrInvalidProject
+		}
+
+		e, err := stackdriver.NewExporter(stackdriver.Options{
+			ProjectID: cfg.Attributes[GCPProjectID],
+		})
+		if err != nil {
+			return fmt.Errorf("failed to create new exporter: %w", err)
+		}
+
+		exporter = e
+	}
+
+	if exporter == nil {
+		return nil
 	}
 
 	trace.RegisterExporter(exporter)
