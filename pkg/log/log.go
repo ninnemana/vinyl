@@ -1,13 +1,10 @@
 package log
 
 import (
-	"context"
 	"os"
 	"time"
 
-	"cloud.google.com/go/logging"
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
-	"github.com/jonstaryuk/gcloudzap"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -23,7 +20,7 @@ func customTimeEncoder(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
 	enc.AppendString(t.Format(timeFormat))
 }
 
-func Init() (*zap.Logger, Closer, error) {
+func Init() (*zap.Logger, error) {
 	globalLevel := zapcore.Level(defaultLevel)
 
 	// High-priority output should also go to standard error, and low-priority
@@ -56,12 +53,7 @@ func Init() (*zap.Logger, Closer, error) {
 		zapcore.NewCore(consoleEncoder, consoleInfos, lowPriority),
 	)
 
-	client, err := logging.NewClient(context.Background(), os.Getenv("GCP_PROJECT_ID"))
-	if err != nil {
-		return nil, nil, err
-	}
-
-	l := zap.New(gcloudzap.Tee(core, client, "vinyltap.io"))
+	l := zap.New(core)
 	zap.RedirectStdLog(l)
 
 	if !useCustomTimeFormat {
@@ -70,5 +62,5 @@ func Init() (*zap.Logger, Closer, error) {
 
 	grpc_zap.ReplaceGrpcLogger(l)
 
-	return l, client.Close, nil
+	return l, nil
 }

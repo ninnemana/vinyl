@@ -10,7 +10,6 @@ import (
 	httpserver "github.com/ninnemana/vinyl/pkg/http"
 	userStore "github.com/ninnemana/vinyl/pkg/users/firestore"
 	vinylStore "github.com/ninnemana/vinyl/pkg/vinyl/firestore"
-	"go.opentelemetry.io/otel/api/global"
 	"go.uber.org/zap"
 	"google.golang.org/api/option"
 )
@@ -65,7 +64,7 @@ func Initialize(log *zap.Logger) error {
 		return err
 	}
 
-	userSvc, err := userStore.New(ctx, log, global.TracerProvider().Tracer("vinyltap.io"), projectID, googleAuthOptions...)
+	userSvc, err := userStore.New(ctx, log, projectID, googleAuthOptions...)
 	if err != nil {
 		return err
 	}

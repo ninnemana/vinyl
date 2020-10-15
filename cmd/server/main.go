@@ -16,12 +16,11 @@ var (
 
 func main() {
 	fmt.Printf("%+v\n", os.Environ())
-	zlg, closer, err := log.Init()
+	zlg, err := log.Init()
 	if err != nil {
 		fmt.Printf("failed to create logger: %v\n", err)
 		os.Exit(1)
 	}
-	defer closer()
 
 	if err := tracer.Init(projectID); err != nil {
 		fmt.Printf("failed to create tracer: %v\n", err)

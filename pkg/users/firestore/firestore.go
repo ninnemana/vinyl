@@ -11,10 +11,9 @@ import (
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
+	"github.com/ninnemana/vinyl/pkg/tracer"
 	"github.com/ninnemana/vinyl/pkg/users"
-	"go.opentelemetry.io/otel/api/trace"
-	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/label"
+	"go.opencensus.io/trace"
 	"go.uber.org/zap"
 	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
@@ -27,25 +26,27 @@ const (
 
 type Service struct {
 	log       *zap.Logger
-	tracer    trace.Tracer
 	firestore *firestore.Client
 	projectID string
 }
 
-func New(ctx context.Context, l *zap.Logger, tracer trace.Tracer, projectID string, opts ...option.ClientOption) (*Service, error) {
-	ctx, span := tracer.Start(ctx, "users/firestore.New")
+func New(ctx context.Context, l *zap.Logger, projectID string, opts ...option.ClientOption) (*Service, error) {
+	ctx, span := trace.StartSpan(ctx, "users/firestore.New")
 	defer span.End()
 
 	client, err := firestore.NewClient(ctx, projectID, opts...)
 	if err != nil {
-		span.RecordError(ctx, err)
+		tracer.RecordError(ctx, tracer.ErrorConfig{
+			Error:   err,
+			Message: "failed to create Firestore client",
+			Code:    trace.StatusCodeFailedPrecondition,
+		})
 
 		return nil, fmt.Errorf("failed to create Firestore client: %w", err)
 	}
 
 	return &Service{
 		l,
-		tracer,
 		client,
 		projectID,
 	}, nil
@@ -71,14 +72,18 @@ func (s *Service) Route() string {
 }
 
 func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	ctx, span := s.tracer.Start(r.Context(), "users/firestore.ServeHTTP")
+	ctx, span := trace.StartSpan(r.Context(), "users/firestore.ServeHTTP")
 	defer span.End()
 
 	r = r.WithContext(ctx)
 
 	route := mux.CurrentRoute(r)
 	if route == nil {
-		span.AddEvent(ctx, "no route found", label.String("path", r.URL.Path))
+		span.SetStatus(trace.Status{
+			Code:    trace.StatusCodeNotFound,
+			Message: "no route found",
+		})
+		span.AddAttributes(trace.StringAttribute("path", r.URL.Path))
 		s.log.Error("no route found", zap.String("path", r.URL.Path))
 		return
 	}
@@ -92,25 +97,34 @@ func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Service) SaveHandler(w http.ResponseWriter, r *http.Request) {
-	ctx, span := s.tracer.Start(r.Context(), "users/firestore.SaveHandler")
+	ctx, span := trace.StartSpan(r.Context(), "users/firestore.SaveHandler")
 	defer span.End()
 
 	var u users.User
 	if err := json.NewDecoder(r.Body).Decode(&u); err != nil {
-		span.RecordError(ctx, err, trace.WithErrorStatus(codes.InvalidArgument))
+		tracer.RecordError(ctx, tracer.ErrorConfig{
+			Error:   err,
+			Message: "failed to decode request body",
+			Code:    trace.StatusCodeInvalidArgument,
+		})
+
 		s.log.Error("failed to decode request body", zap.Error(err))
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	span.SetAttribute("email", u.GetEmail())
+	span.AddAttributes(trace.StringAttribute("email", u.GetEmail()))
 
 	result, err := s.Save(ctx, &u)
 	switch err.(type) {
 	case nil:
 		w.Header().Set("Content-Type", "application/json")
 		if err := json.NewEncoder(w).Encode(result); err != nil {
-			span.RecordError(ctx, err, trace.WithErrorStatus(codes.Internal))
+			span.SetStatus(trace.Status{
+				Code:    trace.StatusCodeInvalidArgument,
+				Message: "failed to encode user",
+			})
+			span.AddAttributes(trace.StringAttribute("error", err.Error()))
 			s.log.Error("failed to encode user", zap.Error(err))
 
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -118,12 +132,16 @@ func (s *Service) SaveHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	case users.ValidationError:
 		s.log.Debug("user failed validation", zap.Error(err))
-		span.SetStatus(codes.InvalidArgument, "user failed validation")
+		// span.SetStatus(codes.Error, "user failed validation")
 
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	default:
-		span.RecordError(ctx, err, trace.WithErrorStatus(codes.Internal))
+		span.SetStatus(trace.Status{
+			Code:    trace.StatusCodeInvalidArgument,
+			Message: "failed to save user",
+		})
+		span.AddAttributes(trace.StringAttribute("error", err.Error()))
 
 		s.log.Error("failed to save user", zap.Error(err))
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -132,12 +150,16 @@ func (s *Service) SaveHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Service) GetHandler(w http.ResponseWriter, r *http.Request) {
-	ctx, span := s.tracer.Start(r.Context(), "users/firestore.GetHandler")
+	ctx, span := trace.StartSpan(r.Context(), "users/firestore.GetHandler")
 	defer span.End()
 
 	var params users.GetParams
 	if err := json.NewDecoder(r.Body).Decode(&params); err != nil {
-		span.RecordError(ctx, err, trace.WithErrorStatus(codes.InvalidArgument))
+		tracer.RecordError(ctx, tracer.ErrorConfig{
+			Error:   err,
+			Message: "failed to decode request body",
+			Code:    trace.StatusCodeInvalidArgument,
+		})
 
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -145,40 +167,57 @@ func (s *Service) GetHandler(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := s.Get(ctx, &params)
 	if err != nil {
-		span.RecordError(ctx, err, trace.WithErrorStatus(codes.Internal))
+		tracer.RecordError(ctx, tracer.ErrorConfig{
+			Error:   err,
+			Message: "failed to save user",
+			Code:    trace.StatusCodeInternal,
+		})
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Add("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
-		span.RecordError(ctx, err, trace.WithErrorStatus(codes.Internal))
+		tracer.RecordError(ctx, tracer.ErrorConfig{
+			Error:   err,
+			Message: "failed to encode request body",
+			Code:    trace.StatusCodeInternal,
+		})
+
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 }
 
 func (s *Service) HealthHandler(w http.ResponseWriter, r *http.Request) {
-	ctx, span := s.tracer.Start(r.Context(), "users/firestore.HealthHandler")
+	ctx, span := trace.StartSpan(r.Context(), "users/firestore.HealthHandler")
 	defer span.End()
 
 	resp, err := s.Health(ctx, &users.HealthRequest{})
 	if err != nil {
-		span.RecordError(ctx, err, trace.WithErrorStatus(codes.Internal))
+		tracer.RecordError(ctx, tracer.ErrorConfig{
+			Error:   err,
+			Message: "failed to execute health check",
+			Code:    trace.StatusCodeInternal,
+		})
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Add("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
-		span.RecordError(ctx, err, trace.WithErrorStatus(codes.Internal))
+		span.SetStatus(trace.Status{
+			Code:    trace.StatusCodeInternal,
+			Message: "failed to encoderesponse",
+		})
+		span.AddAttributes(trace.StringAttribute("error", err.Error()))
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 }
 
 func (s *Service) Health(ctx context.Context, p *users.HealthRequest) (*users.HealthResponse, error) {
-	_, span := s.tracer.Start(ctx, "users/firestore.Health")
+	_, span := trace.StartSpan(ctx, "users/firestore.Health")
 	defer span.End()
 
 	return &users.HealthResponse{
@@ -188,16 +227,20 @@ func (s *Service) Health(ctx context.Context, p *users.HealthRequest) (*users.He
 }
 
 func (s *Service) Get(ctx context.Context, p *users.GetParams) (*users.User, error) {
-	ctx, span := s.tracer.Start(ctx, "users/firestore.Get")
+	ctx, span := trace.StartSpan(ctx, "users/firestore.Get")
 	defer span.End()
 
 	s.log.Debug(
 		"fetch user",
 		zap.String("span_id", span.SpanContext().SpanID.String()),
-		zap.String("trace", fmt.Sprintf(" projects/%s/traces/%s", s.projectID, span.SpanContext().TraceID.String())),
+		zap.String("trace", fmt.Sprintf("projects/%s/traces/%s", s.projectID, span.SpanContext().TraceID.String())),
 	)
 
-	span.AddEvent(ctx, "fetching user", label.Any("params", p))
+	span.Annotate([]trace.Attribute{
+		trace.StringAttribute("params", p.String()),
+	},
+		"fetching user",
+	)
 
 	coll := s.firestore.Collection(Entity)
 
@@ -216,7 +259,12 @@ func (s *Service) Get(ctx context.Context, p *users.GetParams) (*users.User, err
 		}
 
 		if err != nil {
-			span.RecordError(ctx, err)
+			tracer.RecordError(ctx, tracer.ErrorConfig{
+				Error:   err,
+				Message: "failed to fetch user",
+				Code:    trace.StatusCodeInternal,
+			})
+
 			return nil, err
 		}
 
@@ -231,7 +279,10 @@ func (s *Service) Get(ctx context.Context, p *users.GetParams) (*users.User, err
 	}
 
 	if user == nil {
-		span.AddEvent(ctx, "user not found")
+		span.SetStatus(trace.Status{
+			Code:    trace.StatusCodeNotFound,
+			Message: "user not found",
+		})
 		return nil, users.ErrNotFound
 	}
 
@@ -239,22 +290,30 @@ func (s *Service) Get(ctx context.Context, p *users.GetParams) (*users.User, err
 }
 
 func (s *Service) Save(ctx context.Context, u *users.User) (*users.User, error) {
-	ctx, span := s.tracer.Start(ctx, "users/firestore.Save")
+	ctx, span := trace.StartSpan(ctx, "users/firestore.Save")
 	defer span.End()
 
 	// note: we're doing the validation here so we
 	// can control the response type.
 	if err := u.Validate(); err != nil {
-		span.RecordError(ctx, err)
+		tracer.RecordError(ctx, tracer.ErrorConfig{
+			Error:   err,
+			Message: "failed to fetch user",
+			Code:    trace.StatusCodeInternal,
+		})
 		return nil, err
 	}
 
-	span.SetAttribute("email", u.GetEmail())
+	span.AddAttributes(trace.StringAttribute("email", u.GetEmail()))
 
 	if _, err := s.Get(ctx, &users.GetParams{
 		Email: u.GetEmail(),
 	}); err == nil {
-		span.RecordError(ctx, err, trace.WithErrorStatus(codes.AlreadyExists))
+		tracer.RecordError(ctx, tracer.ErrorConfig{
+			Error:   err,
+			Message: "failed to fetch user",
+			Code:    trace.StatusCodeInternal,
+		})
 		return nil, users.ErrUserExists
 	}
 
@@ -271,7 +330,12 @@ func (s *Service) Save(ctx context.Context, u *users.User) (*users.User, error) 
 
 	pwd, err := users.HashAndSalt([]byte(u.Password))
 	if err != nil {
-		span.RecordError(ctx, err)
+		tracer.RecordError(ctx, tracer.ErrorConfig{
+			Error:   err,
+			Message: "failed to encode password",
+			Code:    trace.StatusCodeInternal,
+		})
+
 		return nil, err
 	}
 
@@ -285,14 +349,22 @@ func (s *Service) Save(ctx context.Context, u *users.User) (*users.User, error) 
 	u.AuthenticatedAccounts = nil
 	js, err := json.Marshal(u)
 	if err != nil {
-		span.RecordError(ctx, err)
+		tracer.RecordError(ctx, tracer.ErrorConfig{
+			Error:   err,
+			Message: "failed to encode user",
+			Code:    trace.StatusCodeInternal,
+		})
 		s.log.Error("failed to marshal user", zap.Error(err))
 		return nil, err
 	}
 
 	var data map[string]interface{}
 	if err := json.Unmarshal(js, &data); err != nil {
-		span.RecordError(ctx, err)
+		tracer.RecordError(ctx, tracer.ErrorConfig{
+			Error:   err,
+			Message: "failed to parse encoding",
+			Code:    trace.StatusCodeInternal,
+		})
 
 		return nil, err
 	}
@@ -300,7 +372,11 @@ func (s *Service) Save(ctx context.Context, u *users.User) (*users.User, error) 
 	coll := s.firestore.Collection(Entity)
 	if _, err := coll.Doc(u.GetId()).Set(ctx, data); err != nil {
 		s.log.Error("failed to save user to store", zap.Error(err))
-		span.RecordError(ctx, err)
+		tracer.RecordError(ctx, tracer.ErrorConfig{
+			Error:   err,
+			Message: "failed to save user",
+			Code:    trace.StatusCodeInternal,
+		})
 
 		return nil, fmt.Errorf("failed to set user into store: %w", err)
 	}
