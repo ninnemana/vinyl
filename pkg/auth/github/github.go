@@ -16,6 +16,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
+	"go.opencensus.io/trace"
 	"go.uber.org/zap"
 	"golang.org/x/oauth2"
 	"google.golang.org/grpc"
@@ -116,13 +117,16 @@ func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Service) AuthenticateHandler(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "auth/github.AuthenticateHandler")
+	defer span.End()
+
 	var req auth.AuthRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	resp, err := s.Authenticate(r.Context(), &req)
+	resp, err := s.Authenticate(ctx, &req)
 	switch {
 	case err == nil:
 		w.Header().Set("Content-Type", "application/json")
