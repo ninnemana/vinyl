@@ -22,7 +22,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := tracer.Init(projectID); err != nil {
+	if err := tracer.Init(tracer.Config{
+		Exporter:    tracer.StackDriver,
+		ServiceName: "vinyltap",
+		Attributes: map[string]string{
+			tracer.GCPProjectID: projectID,
+		},
+	}); err != nil {
 		fmt.Printf("failed to create tracer: %v\n", err)
 		os.Exit(1)
 	}
