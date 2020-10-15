@@ -20,14 +20,15 @@ const routes = [
 		name: 'Login',
 		component: Login
 	},
-	// {
-	// 	path: '/logout',
-	// 	name: 'Logout',
-	// 	beforeEnter: async () => {
-	// 		await store.dispatch('logout');
-	// 	},
-	// 	redirect: { name: 'Login' }
-	// },
+	{
+		path: '/logout',
+		name: 'Logout',
+		beforeEnter: async (to: any, from: any, next: any) => {
+			await store.dispatch('logout');
+			location.replace('/login');
+			next();
+		},
+	},
 	{
 		path: '/account',
 		name: 'Account',

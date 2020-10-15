@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/caarlos0/env/v6"
 	httpserver "github.com/ninnemana/vinyl/pkg/http"
 	"github.com/ninnemana/vinyl/pkg/log"
 	"github.com/ninnemana/vinyl/pkg/router"
@@ -14,8 +15,20 @@ var (
 	projectID = os.Getenv("GCP_PROJECT_ID")
 )
 
+type Config struct {
+	ProjectID               string `env:"GCP_PROJECT_ID"`
+	Tracer                  string `env:"TRACER_EXPORTER" envDefault:"jaeger"`
+	JaegerAgentEndpoint     string `env:"JAEGER_AGENT"`
+	JaegerCollectorEndpoint string `env:"JAEGER_COLLECTOR"`
+}
+
 func main() {
-	fmt.Printf("%+v\n", os.Environ())
+	var cfg Config
+	if err := env.Parse(&cfg); err != nil {
+		fmt.Printf("failed to load required arguments: %v\n", err)
+		os.Exit(1)
+	}
+
 	zlg, err := log.Init()
 	if err != nil {
 		fmt.Printf("failed to create logger: %v\n", err)
@@ -23,10 +36,12 @@ func main() {
 	}
 
 	if err := tracer.Init(tracer.Config{
-		Exporter:    tracer.StackDriver,
+		Exporter:    tracer.Exporter(cfg.Tracer),
 		ServiceName: "vinyltap",
 		Attributes: map[string]string{
-			tracer.GCPProjectID: projectID,
+			tracer.GCPProjectID:            cfg.ProjectID,
+			tracer.JaegerAgentEndpoint:     cfg.JaegerAgentEndpoint,
+			tracer.JaegerCollectorEndpoint: cfg.JaegerCollectorEndpoint,
 		},
 	}); err != nil {
 		fmt.Printf("failed to create tracer: %v\n", err)

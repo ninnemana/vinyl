@@ -137,9 +137,9 @@ export default new Vuex.Store({
 				commit('SET_LOGIN_ERROR', error.response.data);
 			});
 		},
-		// logout({ commit }) {
-		// 	commit('SET_LOGOUT_SESSION');
-		// },
+		logout({ commit }) {
+			commit('SET_ACCOUNT', null);
+		},
 	},
 	modules: {
 	},
