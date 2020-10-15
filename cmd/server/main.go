@@ -25,7 +25,7 @@ type Config struct {
 func main() {
 	var cfg Config
 	if err := env.Parse(&cfg); err != nil {
-		fmt.Printf("failed to load required arguments: %w", err)
+		fmt.Printf("failed to load required arguments: %v\n", err)
 		os.Exit(1)
 	}
 
