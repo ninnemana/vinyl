@@ -41,5 +41,6 @@ services:
     ports:
       - "6831:6831/udp"
       - "16686:16686"
+      - "14268:14268"
 volumes:
   prometheus_data:
