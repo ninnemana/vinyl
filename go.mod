@@ -10,7 +10,7 @@ require (
 	contrib.go.opencensus.io/exporter/stackdriver v0.13.4
 	github.com/caarlos0/env/v6 v6.3.0
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
-	github.com/gogo/protobuf v1.3.1
+	github.com/gogo/protobuf v1.3.2
 	github.com/golang/protobuf v1.4.2
 	github.com/google/go-github/v31 v31.0.0
 	github.com/google/uuid v1.1.2
@@ -27,9 +27,8 @@ require (
 	go.uber.org/zap v1.16.0
 	golang.org/x/crypto v0.0.0-20201012173705-84dcc777aaee
 	golang.org/x/oauth2 v0.0.0-20200902213428-5d25da1a8d43
-	golang.org/x/sync v0.0.0-20201008141435-b3e1573b7520
+	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9
 	golang.org/x/sys v0.0.0-20201015000850-e3ed0017c211 // indirect
-	golang.org/x/tools v0.0.0-20201014231627-1610a49f37af // indirect
 	google.golang.org/api v0.33.0
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20201014134559-03b6142f0dc9
