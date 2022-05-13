@@ -59,6 +59,14 @@ option (grpc.gateway.protoc_gen_swagger.options.openapiv2_swagger) = {
     produces: "application/json";
 };
 
+message AuthenticateRequest {
+
+}
+
+message AuthenticateResponse {
+
+}
+
 service Users {
 	rpc Health(HealthRequest) returns (HealthResponse) {
 		option (google.api.http) = {
@@ -85,6 +93,11 @@ service Users {
 		option (grpc.gateway.protoc_gen_swagger.options.openapiv2_operation) = {
 			description: "Save a single user";
 			summary: "Save User";
+		};
+	}
+	rpc Authenticate(AuthenticateRequest) returns (AuthenticateResponse) {
+		option (google.api.http) = {
+			post: "/users/authenticate/account";
 		};
 	}
 }

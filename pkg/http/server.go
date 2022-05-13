@@ -7,18 +7,18 @@ import (
 	"os"
 	"path/filepath"
 
-	"go.uber.org/zap"
-
 	"github.com/gorilla/mux"
+	"github.com/ninnemana/tracelog"
 	"github.com/rs/cors"
 	"github.com/soheilhy/cmux"
+	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 )
 
 var (
 	server = &Server{
-		log:  zap.NewNop(),
+		log:  &tracelog.TraceLogger{},
 		rpc:  grpc.NewServer(),
 		http: &http.Server{Handler: mux.NewRouter().StrictSlash(true)},
 	}
@@ -34,13 +34,13 @@ type Handler interface {
 }
 
 type Server struct {
-	log      *zap.Logger
+	log      *tracelog.TraceLogger
 	http     *http.Server
 	rpc      *grpc.Server
 	listener net.Listener
 }
 
-func New(log *zap.Logger) (*Server, error) {
+func New(log *tracelog.TraceLogger) (*Server, error) {
 	listener, err := net.Listen("tcp", ":8080")
 	if err != nil {
 		return nil, err

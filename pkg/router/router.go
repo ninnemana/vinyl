@@ -5,12 +5,13 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/ninnemana/tracelog"
+
 	"github.com/ninnemana/vinyl/pkg/auth"
 	"github.com/ninnemana/vinyl/pkg/auth/github"
 	httpserver "github.com/ninnemana/vinyl/pkg/http"
 	userStore "github.com/ninnemana/vinyl/pkg/users/firestore"
 	vinylStore "github.com/ninnemana/vinyl/pkg/vinyl/firestore"
-	"go.uber.org/zap"
 	"google.golang.org/api/option"
 )
 
@@ -24,7 +25,7 @@ var (
 	svcAcctFile  = os.Getenv("GCLOUD_SERVICE_ACCT_FILE")
 )
 
-func Initialize(log *zap.Logger) error {
+func Initialize(log *tracelog.TraceLogger) error {
 	ctx := context.Background()
 
 	hostname, err := os.Hostname()
@@ -76,13 +77,14 @@ func Initialize(log *zap.Logger) error {
 	githubSvc, err := github.New(
 		context.Background(),
 		github.Config{
-			Logger:       log,
-			UserService:  userSvc,
-			Tokenizer:    tokenizer,
-			Hostname:     hostname,
-			RedirectURL:  redirectURL,
-			ClientID:     clientID,
-			ClientSecret: clientSecret,
+			Logger:        log,
+			UserService:   userSvc,
+			Tokenizer:     tokenizer,
+			Hostname:      hostname,
+			RedirectURL:   redirectURL,
+			ClientID:      clientID,
+			ClientSecret:  clientSecret,
+			DiscogsAPIKey: discogsKey,
 		},
 	)
 	if err != nil {

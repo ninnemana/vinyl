@@ -1,6 +1,6 @@
 package auth
 
-//go:generate protoc --include_imports --include_source_info --proto_path=$GOPATH/pkg/mod/github.com/grpc-ecosystem/grpc-gateway@v1.14.5/ --proto_path=$GOPATH/pkg/mod/ --proto_path=$GOPATH/src/github.com/ninnemana/vinyl/ --proto_path=$GOPATH/pkg/mod/github.com/grpc-ecosystem/grpc-gateway@v1.14.5/third_party/googleapis/ --proto_path=$GOPATH/pkg/mod/github.com/gogo/protobuf@v1.3.1/ --descriptor_set_out=api_descriptor.pb --go_out=plugins=grpc:$GOPATH/src $GOPATH/src/github.com/ninnemana/vinyl/pkg/auth/auth.proto
+//go:generate protoc --proto_path=. --go_out=. --go_opt=paths=source_relative ./auth.proto --proto_path=$GOPATH/src/github.com/ninnemana/vinyl --proto_path=$GOPATH/pkg/mod/github.com/gogo/protobuf@v1.3.2/ --proto_path=$GOPATH/pkg/mod/github.com/grpc-ecosystem/grpc-gateway@v1.16.0/third_party/googleapis/ --proto_path=$GOPATH/pkg/mod/github.com/grpc-ecosystem/grpc-gateway@v1.16.0/
 
 import (
 	"context"
@@ -9,12 +9,20 @@ import (
 	"strings"
 	"time"
 
+	"go.opentelemetry.io/otel/codes"
+
+	"go.opentelemetry.io/otel"
+
 	"github.com/dgrijalva/jwt-go"
 	"github.com/ninnemana/vinyl/pkg/users"
 )
 
 const (
 	CookieName = "vinyl-auth"
+)
+
+var (
+	tracer = otel.Tracer("pkg/auth")
 )
 
 type User struct {
@@ -75,9 +83,17 @@ func (t *JWT) GenerateToken(_ context.Context, u *users.User) (string, error) {
 
 func (t *JWT) Authenticator(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx, span := tracer.Start(r.Context(), "jwt.Authenticator")
+		defer span.End()
+
 		auth := r.Header.Get("Authorization")
 		if auth == "" {
 			w.WriteHeader(http.StatusUnauthorized)
+			_, _ = w.Write([]byte("Not Authorized"))
+
+			span.SetStatus(codes.Ok, "Not Authorized")
+			span.AddEvent("unauthorized")
+
 			return
 		}
 
@@ -98,6 +114,6 @@ func (t *JWT) Authenticator(next http.Handler) http.Handler {
 		}
 		_ = c
 
-		next.ServeHTTP(w, r)
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

@@ -8,15 +8,17 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gorilla/mux"
-	"github.com/ninnemana/vinyl/pkg/auth"
-	"github.com/ninnemana/vinyl/pkg/vinyl"
-	"golang.org/x/sync/errgroup"
+	"go.opentelemetry.io/otel"
 
 	"cloud.google.com/go/firestore"
-	discogs "github.com/ninnemana/go-discogs"
+	"github.com/gorilla/mux"
+	"github.com/ninnemana/go-discogs"
+	"github.com/ninnemana/tracelog"
+	"github.com/ninnemana/vinyl/pkg/auth"
+	"github.com/ninnemana/vinyl/pkg/vinyl"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
+	"golang.org/x/sync/errgroup"
 	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
 	"google.golang.org/grpc"
@@ -30,19 +32,22 @@ const (
 
 var (
 	ErrInvalidLogger = errors.New("the provided logger was not valid")
+
+	tracer = otel.Tracer("pkg/vinyl/firestore")
 )
 
 type Service struct {
 	client        *firestore.Client
 	discogs       discogs.Discogs
-	log           *zap.Logger
+	log           *tracelog.TraceLogger
 	tokenizer     auth.Tokenizer
 	initTimestamp time.Time
 	hostname      string
+	vinyl.UnimplementedVinylServer
 }
 
 type Config struct {
-	Logger          *zap.Logger
+	Logger          *tracelog.TraceLogger
 	GoogleProjectID string
 	DiscogsAPIKey   string
 	Hostname        string
@@ -171,7 +176,7 @@ func (s *Service) Get(ctx context.Context, p *vinyl.GetParams) (*vinyl.Master, e
 
 		s.log.Debug("querying discogs for release", zap.Int("releaseID", id))
 
-		res, err := s.discogs.Master(id)
+		res, err := s.discogs.Master(ctx, id)
 		if err != nil {
 			return err
 		}
@@ -251,12 +256,17 @@ func (s *Service) Route() string {
 }
 
 func (s *Service) Search(ctx context.Context, p *vinyl.SearchParams) (*vinyl.SearchResponse, error) {
+	ctx, span := tracer.Start(ctx, "vinyl/discogs.Search")
+	defer span.End()
+
+	s.log.SetContext(ctx)
+
 	s.log.Debug(
 		"Searching for matching records against Discogs",
 		zap.Any("params", p),
 	)
 
-	search, err := s.discogs.Search(discogs.SearchRequest{
+	search, err := s.discogs.Search(ctx, discogs.SearchRequest{
 		Q:            p.GetQuery(),
 		ReleaseTitle: p.GetReleaseTitle(),
 		Type:         "master",
@@ -278,7 +288,7 @@ func (s *Service) Search(ctx context.Context, p *vinyl.SearchParams) (*vinyl.Sea
 		return nil, errors.Wrap(err, "failed to execute search operation")
 	}
 
-	results := []*vinyl.ReleaseResponse{}
+	var results []*vinyl.ReleaseResponse
 	for _, res := range search.Results {
 		year, _ := strconv.ParseInt(res.Year, 0, 64)
 

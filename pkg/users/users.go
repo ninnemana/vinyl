@@ -1,11 +1,12 @@
 package users
 
-//go:generate protoc --include_imports --include_source_info --proto_path=$GOPATH/pkg/mod/github.com/grpc-ecosystem/grpc-gateway@v1.14.5/ --proto_path=$GOPATH/pkg/mod/ --proto_path=$GOPATH/src/github.com/ninnemana/vinyl/ --proto_path=$GOPATH/pkg/mod/github.com/grpc-ecosystem/grpc-gateway@v1.14.5/third_party/googleapis/ --proto_path=$GOPATH/pkg/mod/github.com/gogo/protobuf@v1.3.1/ --descriptor_set_out=api_descriptor.pb --go_out=plugins=grpc:$GOPATH/src $GOPATH/src/github.com/ninnemana/vinyl/pkg/users/users.proto
+//go:generate protoc --proto_path=. --go_out=. --go_opt=paths=source_relative ./users.proto --proto_path=$GOPATH/pkg/mod/github.com/gogo/protobuf@v1.3.2/ --proto_path=$GOPATH/pkg/mod/github.com/grpc-ecosystem/grpc-gateway@v1.16.0/third_party/googleapis/ --proto_path=$GOPATH/pkg/mod/github.com/grpc-ecosystem/grpc-gateway@v1.16.0/
 
 import (
 	"errors"
+	"net/url"
 
-	firestore "cloud.google.com/go/firestore"
+	"cloud.google.com/go/firestore"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -20,24 +21,53 @@ var (
 	ErrInvalidPassword ValidationError = errors.New("user password was not valid")
 )
 
-func (a AuthenticatedAccount) Where(coll *firestore.CollectionRef) {
-	coll.Where("authenticatedAccounts.id", "=", a.GetId())
+func GetFromQueryString(values url.Values) (GetParams, error) {
+	var params GetParams
+
+	if vals, ok := values["id"]; ok && len(vals) == 1 {
+		params.Id = vals[0]
+	}
+
+	if vals, ok := values["email"]; ok && len(vals) == 1 {
+		params.Email = vals[0]
+	}
+
+	return GetParams{
+		Id:    params.Id,
+		Email: params.Email,
+	}, nil
 }
 
-func (u User) Validate() error {
-	if u.GetName() == "" {
+func (x *User) Validate() error {
+	if x.GetName() == "" {
 		return ErrInvalidName
 	}
 
-	if u.GetEmail() == "" {
+	if x.GetEmail() == "" {
 		return ErrInvalidEmail
 	}
 
-	if u.GetPassword() == "" {
+	if x.GetPassword() == "" {
 		return ErrInvalidPassword
 	}
 
 	return nil
+}
+
+func (x *GetParams) Where(query firestore.Query) firestore.Query {
+	if x.Id != "" {
+		query = query.Where("id", "==", x.GetId())
+	}
+
+	if x.Email != "" {
+		query = query.Where("email", "==", x.GetEmail())
+	}
+
+	for _, acct := range x.GetAuthenticatedAccounts() {
+		query = query.Where("authenticatedAccounts.id", "==", acct.GetId())
+	}
+
+	return query
 }
 
 func HashAndSalt(pwd []byte) (string, error) {

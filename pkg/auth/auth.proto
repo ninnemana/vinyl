@@ -30,6 +30,7 @@ message AuthResponse {
 	users.User user = 2;
 }
 
+
 option (grpc.gateway.protoc_gen_swagger.options.openapiv2_swagger) = {
 	info: {
 		title: "Auth API";
@@ -47,6 +48,16 @@ option (grpc.gateway.protoc_gen_swagger.options.openapiv2_swagger) = {
     produces: "application/json";
 };
 
+message CallbackRequest {
+	string oauth_token = 1;
+	string oauth_verifier = 2;
+}
+
+message CallbackResponse {
+	string token = 1;
+	string secret = 2;
+}
+
 service Authentication {
 	rpc Health(HealthRequest) returns (HealthResponse) {
 		option (google.api.http) = {
@@ -60,6 +71,24 @@ service Authentication {
 		option (grpc.gateway.protoc_gen_swagger.options.openapiv2_operation) = {
 			description: "Logs a user into the system";
 			summary: "Authenticate";
+		};
+	}
+	// rpc Token(TokenRequest) returns (TokenResponse) {
+	// 	option (google.api.http) = {
+	// 		get: "/auth/token",
+	// 	};
+	// 	option (grpc.gateway.protoc_gen_swagger.options.openapiv2_operation) = {
+	// 		description: "Generates a request token for beginning the OAuth worflow with Discogs";
+	// 		summary: "Generate Request Token";
+	// 	};
+	// }
+	rpc Callback(CallbackRequest) returns (CallbackResponse) {
+		option (google.api.http) = {
+			get: "/auth/callback",
+		};
+		option (grpc.gateway.protoc_gen_swagger.options.openapiv2_operation) = {
+			description: "Generates a request token for beginning the OAuth worflow with Discogs";
+			summary: "Generate Request Token";
 		};
 	}
 }

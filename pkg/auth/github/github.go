@@ -3,23 +3,25 @@ package github
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
 	"time"
 
-	timestamp "github.com/golang/protobuf/ptypes/timestamp"
-	"github.com/ninnemana/vinyl/pkg/auth"
-	"github.com/ninnemana/vinyl/pkg/users"
-
+	"github.com/gomodule/oauth1/oauth"
 	"github.com/google/go-github/v31/github"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
-	"github.com/pkg/errors"
-	"go.opencensus.io/trace"
+	"github.com/ninnemana/go-discogs"
+	"github.com/ninnemana/tracelog"
+	"github.com/ninnemana/vinyl/pkg/auth"
+	"github.com/ninnemana/vinyl/pkg/users"
+	"go.opentelemetry.io/otel"
 	"go.uber.org/zap"
 	"golang.org/x/oauth2"
 	"google.golang.org/grpc"
+	timestamp "google.golang.org/protobuf/types/known/timestamppb"
 )
 
 const (
@@ -31,10 +33,19 @@ var (
 	httpClient       = &http.Client{
 		Timeout: time.Second * 5,
 	}
+
+	oauthClient = oauth.Client{
+		TemporaryCredentialRequestURI: "https://api.discogs.com/oauth/request_token",
+		ResourceOwnerAuthorizationURI: "https://www.discogs.com/oauth/authorize",
+		TokenRequestURI:               "https://api.discogs.com/oauth/access_token",
+		Header:                        http.Header{"User-Agent": {"ExampleDiscogsClient/1.0"}},
+	}
+
+	tracer = otel.Tracer("pkg/auth/github")
 )
 
 type Service struct {
-	log           *zap.Logger
+	log           *tracelog.TraceLogger
 	initTimestamp time.Time
 	hostname      string
 	http          *http.Client
@@ -44,6 +55,8 @@ type Service struct {
 	redirectURL   string
 	clientID      string
 	clientSecret  string
+	discogs       discogs.Discogs
+	auth.UnimplementedAuthenticationServer
 }
 
 type AuthResponse struct {
@@ -52,18 +65,27 @@ type AuthResponse struct {
 }
 
 type Config struct {
-	Logger       *zap.Logger
-	UserService  users.UsersServer
-	Tokenizer    auth.Tokenizer
-	Hostname     string
-	RedirectURL  string
-	ClientID     string
-	ClientSecret string
+	Logger        *tracelog.TraceLogger
+	UserService   users.UsersServer
+	Tokenizer     auth.Tokenizer
+	DiscogsAPIKey string
+	Hostname      string
+	RedirectURL   string
+	ClientID      string
+	ClientSecret  string
 }
 
 func New(ctx context.Context, cfg Config) (*Service, error) {
 	if cfg.Logger == nil {
 		return nil, ErrInvalidLogger
+	}
+
+	disc, err := discogs.New(&discogs.Options{
+		UserAgent: "Some Agent",
+		Token:     cfg.DiscogsAPIKey,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create discogs client: %w", err)
 	}
 
 	return &Service{
@@ -77,7 +99,19 @@ func New(ctx context.Context, cfg Config) (*Service, error) {
 		redirectURL:   cfg.RedirectURL,
 		clientID:      cfg.ClientID,
 		clientSecret:  cfg.ClientSecret,
+		discogs:       disc,
 	}, nil
+}
+
+//
+//func (s *Service) Token(ctx context.Context, request *auth.To) (*auth.TokenResponse, error) {
+//	//TODO implement me
+//	panic("implement me")
+//}
+
+func (s *Service) Callback(ctx context.Context, request *auth.CallbackRequest) (*auth.CallbackResponse, error) {
+	//TODO implement me
+	panic("implement me")
 }
 
 func (s *Service) Middleware() []mux.MiddlewareFunc {
@@ -111,13 +145,15 @@ func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	sub.HandleFunc("/authorize", s.AuthorizeHandler)
 	sub.HandleFunc("/health", s.tokenizer.Authenticator(http.HandlerFunc(s.HealthHandler)).ServeHTTP)
 	sub.HandleFunc("/redirect", s.CallbackHandler)
+	sub.HandleFunc("/discogs/token", s.DiscogsTokenHandler)
+	sub.HandleFunc("/discogs/callback", s.DiscogsCallback)
 	sub.HandleFunc("", s.AuthenticateHandler)
 
 	sub.ServeHTTP(w, r)
 }
 
 func (s *Service) AuthenticateHandler(w http.ResponseWriter, r *http.Request) {
-	ctx, span := trace.StartSpan(r.Context(), "auth/github.AuthenticateHandler")
+	ctx, span := tracer.Start(r.Context(), "auth/github.AuthenticateHandler")
 	defer span.End()
 
 	var req auth.AuthRequest
@@ -191,6 +227,14 @@ func (s *Service) AuthHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Sprintf("https://github.com/login/oauth/authorize?client_id=%s&redirect_uri=%s", s.clientID, s.redirectURL),
 		http.StatusTemporaryRedirect,
 	)
+}
+
+func (s *Service) DiscogsTokenHandler(w http.ResponseWriter, r *http.Request) {
+
+}
+
+func (s *Service) DiscogsCallback(w http.ResponseWriter, r *http.Request) {
+
 }
 
 func (s *Service) CallbackHandler(w http.ResponseWriter, r *http.Request) {
