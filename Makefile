@@ -11,8 +11,11 @@ godeps:
 	@go get github.com/grpc-ecosystem/grpc-gateway@v1.14.5
 	@go get github.com/grpc-ecosystem/grpc-gateway/protoc-gen-grpc-gateway@v1.14.5
 	@go get github.com/grpc-ecosystem/grpc-gateway/protoc-gen-swagger@v1.14.5
-	@go get github.com/golang/protobuf/protoc-gen-go@v1.4.2
+	@go get google.golang.org/protobuf@v1.28.0
 	@go get github.com/gogo/protobuf/gogoproto@v1.3.1
+	@go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.28.0
+	@go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.2.0
+
 
 protoc:
 	@./scripts/protoc.sh
