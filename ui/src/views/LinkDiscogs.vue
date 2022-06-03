@@ -1,13 +1,12 @@
 <template>
     <v-content>
-        <v-container fluid v-if='HasAccount'>
-            <h1>Account Details</h1>
+        <v-container fluid>
+            <h1>Add Discogs Account</h1>
             <v-form>
                 <v-container>
                     <v-row justify="center">
                         <v-col cols="12" md="8">
                             <v-text-field 
-                                v-model="account.user.name" 
                                 :counter="10" 
                                 label="Name" 
                                 required
@@ -18,16 +17,9 @@
                     <v-row justify="center">
                         <v-col cols="12" md="8">
                             <v-text-field 
-                                v-model="account.user.email" 
-                                :rules="emailRules()" 
                                 label="Email address" 
                                 required 
                             />
-                        </v-col>
-                    </v-row>
-                    <v-row justify="center">
-                        <v-col cols="12" md="8">
-                            <a href="https://discogs.com/oauth/authorize?oauth_token=GVfAZpBqyToJfWxkcBaUMtzokryPitbUNnWSqQvM">Link Discogs Account</a>
                         </v-col>
                     </v-row>
                 </v-container>
@@ -42,7 +34,7 @@ import { Component, Vue } from 'vue-property-decorator';
 @Component({
 	components: {}
 })
-export default class Account extends Vue {
+export default class LinkDiscogs extends Vue {
     private account: any;
 
     constructor() {
@@ -50,26 +42,10 @@ export default class Account extends Vue {
         this.account = null;
     }
 
-    emailRules(): any {
-        return [ 
-            (v: any) => !v || /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/.test(v) || 'E-mail must be valid'
-        ];
-    }
-
     computed() {
         return {
             account: this.$store.getters.getAccount,
         };
-    }
-
-    get HasAccount(): boolean {
-        const acct = this.$store.getters.getAccount;
-        if (acct === null) {
-            return false;
-        }
-
-        this.account = acct;
-        return true;
     }
 }
 </script>

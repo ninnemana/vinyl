@@ -4,6 +4,7 @@ import store from '../store'
 import Account from '../views/Account.vue'
 import CreateAccount from '../views/CreateAccount.vue'
 import Home from '../views/Home.vue'
+import LinkDiscogs from '../views/LinkDiscogs.vue'
 import Login from '../views/Login.vue'
 import ResetPassword from '../views/ResetPassword.vue'
 
@@ -33,6 +34,11 @@ const routes = [
 		path: '/account',
 		name: 'Account',
 		component: Account
+	},
+	{
+		path: '/account/discogs',
+		name: 'Link Discogs',
+		component: LinkDiscogs
 	},
 	{
 		path: '/account/create',
