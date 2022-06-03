@@ -60,11 +60,12 @@ option (grpc.gateway.protoc_gen_swagger.options.openapiv2_swagger) = {
 };
 
 message AuthenticateRequest {
-
+	string userID = 1;
+	string password = 2;
 }
 
 message AuthenticateResponse {
-
+	string token = 1;
 }
 
 service Users {
@@ -98,6 +99,10 @@ service Users {
 	rpc Authenticate(AuthenticateRequest) returns (AuthenticateResponse) {
 		option (google.api.http) = {
 			post: "/users/authenticate/account";
+		};
+		option (grpc.gateway.protoc_gen_swagger.options.openapiv2_operation) = {
+			description: "Save a single user";
+			summary: "Save User";
 		};
 	}
 }

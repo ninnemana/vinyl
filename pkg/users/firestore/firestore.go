@@ -7,11 +7,13 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/ninnemana/vinyl/pkg/auth"
+	"github.com/ninnemana/vinyl/pkg/users"
+
 	"cloud.google.com/go/firestore"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/ninnemana/tracelog"
-	"github.com/ninnemana/vinyl/pkg/users"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -19,6 +21,8 @@ import (
 	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
 	"google.golang.org/grpc"
+	grpccodes "google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	timestamp "google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -35,6 +39,7 @@ type Service struct {
 	log       *tracelog.TraceLogger
 	firestore *firestore.Client
 	projectID string
+	tokenizer auth.Tokenizer
 	users.UnimplementedUsersServer
 }
 
@@ -44,7 +49,7 @@ type Authentication struct {
 	Updated  time.Time
 }
 
-func New(ctx context.Context, l *tracelog.TraceLogger, projectID string, opts ...option.ClientOption) (*Service, error) {
+func New(ctx context.Context, l *tracelog.TraceLogger, projectID string, tokenizer auth.Tokenizer, opts ...option.ClientOption) (*Service, error) {
 	ctx, span := tracer.Start(ctx, "users/firestore.New")
 	defer span.End()
 
@@ -63,6 +68,7 @@ func New(ctx context.Context, l *tracelog.TraceLogger, projectID string, opts ..
 		l,
 		client,
 		projectID,
+		tokenizer,
 		users.UnimplementedUsersServer{},
 	}, nil
 }
@@ -227,6 +233,56 @@ func (s *Service) HealthHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (s *Service) Authenticate(ctx context.Context, p *users.AuthenticateRequest) (*users.AuthenticateResponse, error) {
+	ctx, span := tracer.Start(ctx, "users/firestore.Authenticate")
+	defer span.End()
+
+	s.log.Debug(
+		"authenticate user",
+		zap.String("userID", p.UserID),
+		zap.String("password", p.Password),
+	)
+
+	user, err := s.Get(ctx, &users.GetParams{
+		Id: p.GetUserID(),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	doc, err := s.firestore.Collection(AuthEntity).Doc(p.UserID).Get(ctx)
+	switch status.Code(err) {
+	case grpccodes.OK:
+		var creds Authentication
+		if err := doc.DataTo(&creds); err != nil {
+			return nil, fmt.Errorf("failed to decode credential entry: %w", err)
+		}
+
+		if !users.ComparePasswords([]byte(creds.Password), []byte(p.Password)) {
+			return nil, users.ErrNotAuthorized
+		}
+
+		token, err := s.tokenizer.GenerateToken(ctx, user)
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate auth token: %w", err)
+		}
+
+		return &users.AuthenticateResponse{
+			Token: token,
+		}, nil
+	case grpccodes.NotFound:
+		span.SetStatus(codes.Ok, "credentials not found for user")
+		span.RecordError(err)
+
+		return nil, users.ErrNotFound
+	default:
+		span.SetStatus(codes.Error, "failed to fetch credentials for user")
+		span.RecordError(err)
+
+		return nil, fmt.Errorf("failed to fetch credentials: %w", err)
+	}
+}
+
 func (s *Service) Health(ctx context.Context, p *users.HealthRequest) (*users.HealthResponse, error) {
 	_, span := tracer.Start(ctx, "users/firestore.Health")
 	defer span.End()
@@ -243,8 +299,7 @@ func (s *Service) Get(ctx context.Context, p *users.GetParams) (*users.User, err
 
 	s.log.Debug(
 		"fetch user",
-		zap.String("span_id", span.SpanContext().SpanID().String()),
-		zap.String("trace", fmt.Sprintf("projects/%s/traces/%s", s.projectID, span.SpanContext().TraceID().String())),
+		zap.String("params", p.String()),
 	)
 
 	span.SetAttributes(attribute.String("params", p.String()))
@@ -267,23 +322,29 @@ func (s *Service) Get(ctx context.Context, p *users.GetParams) (*users.User, err
 		}
 
 		//data := doc.Data()
-		var user users.User
-		if err := doc.DataTo(&user); err != nil {
-			span.SetStatus(codes.Error, "failed to parse user")
-			span.RecordError(err)
+		//var user users.User
+		//if err := doc.DataTo(&user); err != nil {
+		//	span.SetStatus(codes.Error, "failed to parse user")
+		//	span.RecordError(err)
+		//
+		//	return nil, err
+		//}
 
-			return nil, err
+		data := doc.Data()
+		user := &users.User{
+			Id:      toString(data["id"]),
+			Name:    toString(data["name"]),
+			Email:   toString(data["email"]),
+			Created: toTimestamp(data["created"]),
+			Updated: toTimestamp(data["updated"]),
+			Deleted: toTimestamp(data["deleted"]),
 		}
 
-		return &user, nil
+		if user.Deleted != nil {
+			continue
+		}
 
-		//user := &users.User{}
-		//user.Email = toString(data["email"])
-		//user.Id = toString(data["id"])
-		//user.Name = toString(data["name"])
-		////user.Password = toString(data["password"])
-		//user.Created = toTimestamp(data["created"])
-		//user.Updated = toTimestamp(data["updated"])
+		return user, nil
 	}
 
 	span.SetStatus(codes.Ok, "user not found")
@@ -306,13 +367,20 @@ func (s *Service) Save(ctx context.Context, u *users.User) (*users.User, error) 
 
 	span.SetAttributes(attribute.String("email", u.GetEmail()))
 
-	if _, err := s.Get(ctx, &users.GetParams{
+	_, err := s.Get(ctx, &users.GetParams{
 		Email: u.GetEmail(),
-	}); err == nil {
+	})
+	switch err {
+	case nil:
+		span.SetStatus(codes.Ok, "user already exists")
+
+		return nil, users.ErrUserExists
+	case users.ErrNotFound:
+	default:
 		span.SetStatus(codes.Error, "failed to fecth user")
 		span.RecordError(err)
 
-		return nil, users.ErrUserExists
+		return nil, fmt.Errorf("failed to check if user exists: %w", err)
 	}
 
 	// new user workflow
@@ -403,16 +471,16 @@ func toString(i interface{}) string {
 func toTimestamp(i interface{}) *timestamp.Timestamp {
 	v, ok := i.(map[string]interface{})
 	if !ok {
-		return &timestamp.Timestamp{}
+		return nil
 	}
 
 	if v["seconds"] == nil {
-		return &timestamp.Timestamp{}
+		return nil
 	}
 
 	sec, ok := v["seconds"].(float64)
 	if !ok {
-		return &timestamp.Timestamp{}
+		return nil
 	}
 
 	return &timestamp.Timestamp{
