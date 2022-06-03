@@ -10,7 +10,6 @@ import (
 	"go.opentelemetry.io/otel/codes"
 
 	"github.com/gorilla/mux"
-	"github.com/ninnemana/go-discogs"
 	"github.com/ninnemana/tracelog"
 	"github.com/ninnemana/vinyl/pkg/auth"
 	"github.com/ninnemana/vinyl/pkg/users"
@@ -35,22 +34,22 @@ type Service struct {
 	initTimestamp time.Time
 	hostname      string
 	users         users.UsersServer
-	// tokenizer     auth.Tokenizer
-	redirectURL  string
-	clientID     string
-	clientSecret string
-	discogs      discogs.Discogs
+	//tokenizer     auth.Tokenizer
+	//redirectURL  string
+	//clientID     string
+	//clientSecret string
+	//discogs      discogs.Discogs
 	auth.UnimplementedAuthenticationServer
 }
 
 type Config struct {
-	Logger       *tracelog.TraceLogger
-	UserService  users.UsersServer
-	Tokenizer    auth.Tokenizer
-	Hostname     string
-	RedirectURL  string
-	ClientID     string
-	ClientSecret string
+	Logger      *tracelog.TraceLogger
+	UserService users.UsersServer
+	Hostname    string
+	//Tokenizer   auth.Tokenizer
+	//RedirectURL  string
+	//ClientID     string
+	//ClientSecret string
 }
 
 func New(ctx context.Context, cfg Config) (*Service, error) {
@@ -63,9 +62,9 @@ func New(ctx context.Context, cfg Config) (*Service, error) {
 		hostname:      cfg.Hostname,
 		initTimestamp: time.Now().UTC(),
 		users:         cfg.UserService,
-		redirectURL:   cfg.RedirectURL,
-		clientID:      cfg.ClientID,
-		clientSecret:  cfg.ClientSecret,
+		//redirectURL:   cfg.RedirectURL,
+		//clientID:      cfg.ClientID,
+		//clientSecret:  cfg.ClientSecret,
 	}, nil
 }
 
@@ -107,7 +106,13 @@ func (s *Service) Authenticate(ctx context.Context, r *auth.AuthRequest) (*auth.
 	ctx, span := tracer.Start(ctx, "auth/account.Authenticate")
 	defer span.End()
 
-	userSvc, ok := s.users.(users.)
+	if r.GetEmail() == "" {
+		span.SetStatus(codes.Ok, users.ErrInvalidEmail.Error())
+
+		return nil, users.ErrNotFound
+	}
+
+	s.log.Debug("attempting to authenticate", zap.String("email", r.GetEmail()))
 
 	user, err := s.users.Get(ctx, &users.GetParams{
 		Email: r.GetEmail(),
@@ -125,10 +130,11 @@ func (s *Service) Authenticate(ctx context.Context, r *auth.AuthRequest) (*auth.
 		return nil, fmt.Errorf("failed to fetch user record: %w", err)
 	}
 
-	switch s.users.Authenticate(ctx, &users.AuthenticateParams{
-		ID:       user.GetId(),
+	resp, err := s.users.Authenticate(ctx, &users.AuthenticateRequest{
+		UserID:   user.GetId(),
 		Password: r.Password,
-	}) {
+	})
+	switch err {
 	case nil:
 	case users.ErrNotFound:
 		span.SetStatus(codes.Ok, "user not found")
@@ -146,7 +152,7 @@ func (s *Service) Authenticate(ctx context.Context, r *auth.AuthRequest) (*auth.
 	}
 
 	return &auth.AuthResponse{
-		Token: "",
+		Token: resp.GetToken(),
 		User:  user,
 	}, nil
 }
@@ -198,10 +204,34 @@ func (s *Service) TokenHandler(w http.ResponseWriter, r *http.Request) {
 
 	var req auth.AuthRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		span.SetStatus(codes.Ok, "request body was not valid")
+		span.RecordError(err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 
 		return
 	}
 
-	s.Authenticate(r.Context(), &req)
+	s.log.Info("we out here")
+
+	s.log.Debug("attempting to authenticate against service", zap.String("email", req.Email))
+	resp, err := s.Authenticate(r.Context(), &req)
+	switch err {
+	case nil:
+		w.Header().Set("Content-Type", "application/json")
+		if err := json.NewEncoder(w).Encode(resp); err != nil {
+			span.SetStatus(codes.Error, "failed to encode auth response")
+			span.RecordError(err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+	case users.ErrNotAuthorized:
+		span.SetStatus(codes.Ok, "user is not authorized")
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+	case users.ErrNotFound:
+		span.SetStatus(codes.Ok, "user does not exist")
+		http.Error(w, err.Error(), http.StatusNotFound)
+	default:
+		span.SetStatus(codes.Error, "failed to execute auth request")
+		span.RecordError(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 }

@@ -8,7 +8,8 @@ import (
 	"github.com/ninnemana/tracelog"
 
 	"github.com/ninnemana/vinyl/pkg/auth"
-	"github.com/ninnemana/vinyl/pkg/auth/github"
+	"github.com/ninnemana/vinyl/pkg/auth/account"
+	"github.com/ninnemana/vinyl/pkg/auth/discogs"
 	httpserver "github.com/ninnemana/vinyl/pkg/http"
 	userStore "github.com/ninnemana/vinyl/pkg/users/firestore"
 	vinylStore "github.com/ninnemana/vinyl/pkg/vinyl/firestore"
@@ -65,7 +66,7 @@ func Initialize(log *tracelog.TraceLogger) error {
 		return err
 	}
 
-	userSvc, err := userStore.New(ctx, log, projectID, googleAuthOptions...)
+	userSvc, err := userStore.New(ctx, log, projectID, tokenizer, googleAuthOptions...)
 	if err != nil {
 		return err
 	}
@@ -74,25 +75,45 @@ func Initialize(log *tracelog.TraceLogger) error {
 		return err
 	}
 
-	githubSvc, err := github.New(
+	//githubSvc, err := github.New(
+	//	context.Background(),
+	//	github.Config{
+	//		Logger:        log,
+	//		UserService:   userSvc,
+	//		Tokenizer:     tokenizer,
+	//		Hostname:      hostname,
+	//		RedirectURL:   redirectURL,
+	//		ClientID:      clientID,
+	//		ClientSecret:  clientSecret,
+	//		DiscogsAPIKey: discogsKey,
+	//	},
+	//)
+	//if err != nil {
+	//	return fmt.Errorf("failed to create github service: %w", err)
+	//}
+	//
+	//if err := httpserver.RegisterHandler(githubSvc); err != nil {
+	//	return err
+	//}
+
+	accountSvc, err := account.New(
 		context.Background(),
-		github.Config{
-			Logger:        log,
-			UserService:   userSvc,
-			Tokenizer:     tokenizer,
-			Hostname:      hostname,
-			RedirectURL:   redirectURL,
-			ClientID:      clientID,
-			ClientSecret:  clientSecret,
-			DiscogsAPIKey: discogsKey,
+		account.Config{
+			Logger:      log,
+			UserService: userSvc,
+			Hostname:    hostname,
 		},
 	)
 	if err != nil {
-		return fmt.Errorf("failed to create github service: %w", err)
+		return fmt.Errorf("failed to create account service: %w", err)
 	}
 
-	if err := httpserver.RegisterHandler(githubSvc); err != nil {
+	if err := httpserver.RegisterHandler(accountSvc); err != nil {
 		return err
+	}
+
+	if _, err := discogs.New(context.Background(), log); err != nil {
+		return fmt.Errorf("failed to create account service: %w", err)
 	}
 
 	return nil
