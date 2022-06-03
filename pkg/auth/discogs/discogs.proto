@@ -1,0 +1,43 @@
+syntax = "proto3";
+package discogs;
+
+import "google/api/annotations.proto";
+import "protoc-gen-swagger/options/annotations.proto";
+
+option go_package = "github.com/ninnemana/vinyl/pkg/auth/discogs";
+
+message RequestTokenParams {}
+
+message RequestTokenResult {
+	string token = 1;
+}
+
+message AccessTokenParams {
+	string requestToken = 1;
+}
+
+message AccessTokenResult {
+	string token = 1;
+	string secret = 2;
+}
+
+service Discogs {
+	rpc RequestToken(RequestTokenParams) returns (RequestTokenResult) {
+		option(google.api.http) = {
+			get: "/account/discogs";
+		};
+		option (grpc.gateway.protoc_gen_swagger.options.openapiv2_operation) = {
+			description: "Returns the request token used for initiating the Discogs OAuth flow";
+			summary: "Request Token";
+		};
+	}
+	rpc AccessToken(AccessTokenParams) returns (AccessTokenResult) {
+		option(google.api.http) = {
+			post: "/account/discogs";
+		};
+		option (grpc.gateway.protoc_gen_swagger.options.openapiv2_operation) = {
+			description: "Returns the access token used for authenticating Discogs";
+			summary: "Access Token";
+		};
+	}
+}

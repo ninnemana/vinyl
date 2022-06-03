@@ -1,0 +1,24 @@
+runtime: go113
+main: ./cmd/server
+
+env_variables:
+  DISCOGS_API_KEY: ""
+  GCP_PROJECT_ID: "***"
+  GOOGLE_APPLICATION_CREDENTIALS: "***
+  ***
+  ***
+  ***
+  ***
+  ***
+  ***
+  ***
+  ***
+  ***
+  ***
+***
+"
+  GITHUB_CLIENT_ID: ""
+  GITHUB_CLIENT_SECRET: ""
+  BASE_URL: ""
+  JWT_ACCESS_SECRET: "***"
+
