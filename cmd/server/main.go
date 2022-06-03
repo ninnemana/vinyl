@@ -25,6 +25,7 @@ type Config struct {
 	Tracer                  string `env:"TRACER_EXPORTER" envDefault:"jaeger"`
 	JaegerAgentEndpoint     string `env:"JAEGER_AGENT"`
 	JaegerCollectorEndpoint string `env:"JAEGER_COLLECTOR"`
+	LogLevel                string `env:"LOG_LEVEL" envDefault:"info"`
 }
 
 const (
@@ -77,7 +78,16 @@ func main() {
 
 	ctx := context.Background()
 
-	l, err := zap.NewProduction()
+	logConfig := zap.NewProductionConfig()
+	lvl, err := zap.ParseAtomicLevel(cfg.LogLevel)
+	if err != nil {
+		fmt.Printf("failed to parse log level: %v\n", err)
+		os.Exit(1)
+	}
+
+	logConfig.Level = lvl
+
+	l, err := logConfig.Build()
 	if err != nil {
 		log.Fatal(err)
 	}
